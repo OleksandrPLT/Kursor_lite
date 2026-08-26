@@ -64,21 +64,68 @@ func RenderConfig(server ServerConfig, peers []Peer) string {
 // peers who are already connected and unaffected by this change never
 // get dropped — and falls back to a full `wg-quick up` for the
 // first-ever apply, when the interface isn't up yet for syncconf to
-// target. The syncconf command needs a shell for process substitution;
-// that's safe here because the command string is fixed (configPath is a
-// constant, not user input), never built from a request.
+// target.
+//
+// `wg syncconf` needs its input pre-stripped of wg-quick-only
+// directives (Address, ListenPort's alternate forms, etc.) via
+// `wg-quick strip`, routed through a real temp file rather than shell
+// process substitution (`wg syncconf wg0 <(wg-quick strip ...)`) — that
+// syntax needs bash, and `/bin/sh` on Debian/Ubuntu is dash, which
+// doesn't support it and fails with a plain "Syntax error" on every
+// reload after the very first (that first one only ever worked because
+// the interface wasn't up yet, so it took the wg-quick-up fallback
+// path below instead — this bashism was never actually exercised until
+// a second reload was attempted on a server where the interface was
+// already up, silently blocking every future peer change).
 func reload() error {
-	syncCmd := exec.Command("sh", "-c", "wg syncconf "+interfaceName+" <(wg-quick strip "+configPath+")")
-	if out, err := syncCmd.CombinedOutput(); err == nil {
+	if err := syncViaStrippedConfig(); err == nil {
 		return nil
-	} else {
-		lastErr := fmt.Errorf("wg syncconf: %s", out)
-		if out2, err2 := exec.Command("wg-quick", "up", interfaceName).CombinedOutput(); err2 == nil {
+	} else if out, err2 := exec.Command("wg-quick", "up", interfaceName).CombinedOutput(); err2 == nil {
+		return nil
+	} else if strings.Contains(string(out), "already exists") {
+		// wg-quick up refuses because the interface is already up, but
+		// syncconf (the non-disruptive path) just failed for some other
+		// reason — down+up is the blunt last resort: it briefly drops
+		// every currently-connected peer, unlike syncconf, but that's
+		// still better than silently leaving a newly added/edited peer
+		// unable to connect at all.
+		_, _ = exec.Command("wg-quick", "down", interfaceName).CombinedOutput()
+		if out3, err3 := exec.Command("wg-quick", "up", interfaceName).CombinedOutput(); err3 == nil {
 			return nil
 		} else {
-			return fmt.Errorf("%v; wg-quick up also failed: %s", lastErr, out2)
+			return fmt.Errorf("%v; wg-quick down+up also failed: %s", err, out3)
 		}
+	} else {
+		return fmt.Errorf("%v; wg-quick up also failed: %s", err, out)
 	}
+}
+
+// syncViaStrippedConfig runs `wg-quick strip` (which understands
+// wg0.conf's wg-quick-only directives and drops them) into a temp
+// file, then feeds that to `wg syncconf` — the two real commands the
+// old process-substitution one-liner ran, just without needing a shell
+// that supports `<()`.
+func syncViaStrippedConfig() error {
+	stripped, err := exec.Command("wg-quick", "strip", configPath).Output()
+	if err != nil {
+		return fmt.Errorf("wg-quick strip: %w", err)
+	}
+	tmp, err := os.CreateTemp("", "wg0-strip-*.conf")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(stripped); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if out, err := exec.Command("wg", "syncconf", interfaceName, tmp.Name()).CombinedOutput(); err != nil {
+		return fmt.Errorf("wg syncconf: %s", out)
+	}
+	return nil
 }
 
 // Apply renders server+peers to wg0.conf and reloads the interface.

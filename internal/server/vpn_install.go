@@ -10,6 +10,7 @@ package server
 
 import (
 	"encoding/base64"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -24,9 +25,20 @@ type VPNInstallData struct {
 	Token      string // the URL's own token, so the page can link to its /config sibling without guessing the path
 	PeerName   string
 	ConfigText string
-	QRDataURI  string // "" if QR generation failed — the page falls back to the download button + raw text
-	Expired    bool
-	NotFound   bool
+	// QRDataURI is template.URL, not string: html/template's default URL
+	// sanitizer rejects every data: URI outright (renders as the
+	// "#ZgotmplZ" failure marker instead of the image), since it can't
+	// tell a safe one from a crafted one. This value is entirely
+	// server-generated (base64 of a PNG this same handler just
+	// produced, never attacker-influenced), so asserting it's safe by
+	// giving it this type — instead of piping arbitrary input through
+	// html/template as template.URL, which would be the actual
+	// injection risk — is the correct, narrow use of the escape hatch.
+	// "" (zero value) if QR generation failed — the page falls back to
+	// the download button + raw text.
+	QRDataURI template.URL
+	Expired   bool
+	NotFound  bool
 }
 
 func (s *Server) handleVPNInstallPage(w http.ResponseWriter, r *http.Request) {
@@ -54,9 +66,9 @@ func (s *Server) handleVPNInstallPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var qrURI string
+	var qrURI template.URL
 	if png, err := qrcode.Encode(config, qrcode.Medium, 320); err == nil {
-		qrURI = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+		qrURI = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(png))
 	}
 
 	s.render(w, "vpn_install", VPNInstallData{
