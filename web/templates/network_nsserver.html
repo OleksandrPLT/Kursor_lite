@@ -1,0 +1,127 @@
+{{define "network_nsserver"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.nsserver"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.nsserver"}}</h1>
+        <p class="page-sub">{{t .Lang "nsserver.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .Installed}}
+    <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+      <span>{{t .Lang "nsserver.not_detected"}}</span>
+      <form method="post" action="/network/nsserver/install" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "nsserver.install_button"}}</button>
+      </form>
+    </div>
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <div class="panel" style="padding:20px;margin-bottom:16px;background:rgba(0,87,183,0.06);border-color:rgba(0,87,183,0.25);">
+      <div class="panel-title" style="margin-bottom:8px;">{{t .Lang "nsserver.intro_title"}}</div>
+      <p style="font-size:12.5px;color:var(--text);line-height:1.6;margin-bottom:8px;">{{t .Lang "nsserver.intro_text"}}</p>
+      <p style="font-size:11.5px;color:var(--muted);">{{t .Lang "nsserver.single_server_note"}}</p>
+    </div>
+
+    {{if .Installed}}
+    {{$lang := .Lang}}
+    {{$csrf := .CSRFToken}}
+    {{$ip := .ServerIP}}
+
+    <div class="panel" style="padding:20px;margin-bottom:16px;">
+      <form method="post" action="/network/nsserver/zones" class="form-grid" style="grid-template-columns:2fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{$csrf}}">
+        <div>
+          <label class="field-label">{{t .Lang "domains.form_domain"}}</label>
+          <input class="input input-plain" type="text" name="domain" placeholder="example.com" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "nsserver.add_zone_button"}}</button>
+      </form>
+    </div>
+
+    {{if not .Zones}}
+    <div class="panel table-panel"><div class="empty-inline">{{icon "server" 26}}<p>{{t .Lang "nsserver.zones_empty"}}</p></div></div>
+    {{else}}
+    {{range .Zones}}
+    <div class="panel" style="margin-bottom:16px;padding:18px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:15px;font-weight:600;color:var(--text);font-family:var(--font-mono);">{{.Domain}}</span>
+        <form method="post" action="/network/nsserver/zones/delete">
+          <input type="hidden" name="csrf_token" value="{{$csrf}}">
+          <input type="hidden" name="domain" value="{{.Domain}}">
+          <button type="submit" class="link-action link-danger">{{icon "trash" 14}}{{t $lang "nsserver.delete_zone_confirm"}}</button>
+        </form>
+      </div>
+
+      <div class="info-chips" style="margin-bottom:12px;">
+        <div class="info-chip"><span class="info-chip-label">{{t $lang "nsserver.suggested_ns"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">ns1.{{.Domain}}, ns2.{{.Domain}} → {{$ip}}</span></div>
+      </div>
+
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.6fr 0.7fr 0.6fr 1.4fr;">
+        <span class="table-head">{{t $lang "dns.table_name"}}</span>
+        <span class="table-head">{{t $lang "dns.table_type"}}</span>
+        <span class="table-head">TTL</span>
+        <span class="table-head">{{t $lang "dns.table_value"}}</span>
+      </div>
+      {{$domain := .Domain}}
+      {{range .Records}}
+      <div class="accounts-row" style="grid-template-columns:1.6fr 0.7fr 0.6fr 1.4fr;">
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Name}}</span>
+        <span class="cell-muted">{{.Type}}</span>
+        <span class="cell-muted">{{.TTL}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);display:flex;justify-content:space-between;gap:8px;">
+          {{.Value}}
+          {{if and (ne .Type "SOA") (ne .Type "NS")}}
+          <form method="post" action="/network/nsserver/records/delete" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input type="hidden" name="domain" value="{{$domain}}">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <input type="hidden" name="type" value="{{.Type}}">
+            <button type="submit" class="link-action link-danger" style="padding:0;">{{icon "trash" 12}}</button>
+          </form>
+          {{end}}
+        </span>
+      </div>
+      {{end}}
+
+      <form method="post" action="/network/nsserver/records" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{$csrf}}">
+        <input type="hidden" name="domain" value="{{$domain}}">
+        <input class="input input-plain" type="text" name="name" placeholder="{{t $lang "dns.form_name"}}" style="flex:1;min-width:160px;">
+        <select class="input input-plain" name="type" style="width:100px;">
+          <option value="A">A</option>
+          <option value="AAAA">AAAA</option>
+          <option value="CNAME">CNAME</option>
+          <option value="MX">MX</option>
+          <option value="TXT">TXT</option>
+        </select>
+        <input class="input input-plain" type="number" name="ttl" value="3600" style="width:100px;" placeholder="{{t $lang "nsserver.form_ttl"}}">
+        <input class="input input-plain" type="text" name="value" placeholder="{{t $lang "dns.form_value"}}" style="flex:1;min-width:160px;">
+        <button type="submit" class="btn" style="padding:6px 14px;">{{t $lang "nsserver.add_record_button"}}</button>
+      </form>
+    </div>
+    {{end}}
+    {{end}}
+    {{end}}
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

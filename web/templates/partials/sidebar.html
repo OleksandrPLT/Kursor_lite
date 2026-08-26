@@ -36,6 +36,7 @@
   <div class="sidebar-section">{{t .Lang "nav.group.network"}}</div>
   <nav class="nav">
     <a href="/network/domains" class="nav-item{{if eq .Active "network-domains"}} active{{end}}">{{icon "globe" 18}}{{t .Lang "nav.domains"}}</a>
+    <a href="/network/nsserver" class="nav-item{{if eq .Active "network-nsserver"}} active{{end}}">{{icon "server" 18}}{{t .Lang "nav.nsserver"}}</a>
     <a href="/network/dns" class="nav-item{{if eq .Active "network-dns"}} active{{end}}">{{icon "tag" 18}}{{t .Lang "nav.dns"}}</a>
     <a href="/network/ports" class="nav-item{{if eq .Active "network-ports"}} active{{end}}">{{icon "toggles" 18}}{{t .Lang "nav.ports"}}</a>
     <a href="/network/vpn" class="nav-item{{if eq .Active "network-vpn"}} active{{end}}">{{icon "shield" 18}}{{t .Lang "nav.vpn"}}</a>

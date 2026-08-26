@@ -59,6 +59,7 @@ var dict = map[string]map[string]string{
 	"nav.integrations":   {"uk": "Інтеграції", "en": "Integrations"},
 	"nav.software":       {"uk": "Софт / версії", "en": "Software / versions"},
 	"nav.domains":        {"uk": "Домени", "en": "Domains"},
+	"nav.nsserver":       {"uk": "NS Сервер", "en": "NS Server"},
 	"nav.servicedesk":    {"uk": "Служба підтримки", "en": "Service Desk"},
 	"nav.group.system":   {"uk": "Система", "en": "System"},
 	"nav.audit":          {"uk": "Журнал подій", "en": "Audit Log"},
@@ -510,6 +511,24 @@ var dict = map[string]map[string]string{
 	"software.error.install": {"uk": "Не вдалось встановити:", "en": "Couldn't install:"},
 	"software.error.unknown": {"uk": "Невідомий пакет.", "en": "Unknown package."},
 	"software.installed_notice": {"uk": "встановлено.", "en": "installed."},
+
+	// --- NS Server (real PowerDNS authoritative DNS, not a placeholder) ---
+	"nsserver.subtitle": {"uk": "Власний авторитетний DNS-сервер (PowerDNS) — для делегування NS з реєстратора на цей хост.", "en": "Your own authoritative DNS server (PowerDNS) — for delegating NS from your registrar to this host."},
+	"nsserver.not_detected": {"uk": "PowerDNS не знайдено на цьому хості.", "en": "PowerDNS not detected on this host."},
+	"nsserver.install_button": {"uk": "Встановити PowerDNS", "en": "Install PowerDNS"},
+	"nsserver.error.install": {"uk": "Не вдалось встановити PowerDNS:", "en": "Couldn't install PowerDNS:"},
+	"nsserver.error.apply":   {"uk": "Помилка PowerDNS:", "en": "PowerDNS error:"},
+	"nsserver.error.invalid_domain": {"uk": "Некоректний домен.", "en": "Invalid domain."},
+	"nsserver.error.invalid_record": {"uk": "Заповніть ім'я та значення запису.", "en": "Fill in the record's name and value."},
+	"nsserver.intro_title": {"uk": "Як це працює", "en": "How this works"},
+	"nsserver.intro_text": {"uk": "1) Створіть зону для домену тут. 2) У панелі реєстратора домену встановіть кастомні nameserver'и на значення нижче. 3) Зачекайте на поширення (може зайняти до 24-48 год).", "en": "1) Create a zone for your domain here. 2) At your domain registrar, set custom nameservers to the values below. 3) Wait for propagation (can take up to 24-48h)."},
+	"nsserver.single_server_note": {"uk": "Обидва NS вказують на цей же сервер (немає другого фізичного сервера для резервування) — прийнятно для невеликих проєктів, але означає єдину точку відмови.", "en": "Both NS records point at this same server (no second physical server for redundancy) — fine for small projects, but a single point of failure."},
+	"nsserver.add_zone_button": {"uk": "Створити зону", "en": "Create Zone"},
+	"nsserver.suggested_ns": {"uk": "Рекомендовані NS для реєстратора", "en": "Suggested NS for your registrar"},
+	"nsserver.zones_empty": {"uk": "Ще немає жодної зони.", "en": "No zones yet."},
+	"nsserver.add_record_button": {"uk": "Додати/оновити запис", "en": "Add/Update Record"},
+	"nsserver.form_ttl":   {"uk": "TTL", "en": "TTL"},
+	"nsserver.delete_zone_confirm": {"uk": "Видалити зону", "en": "Delete Zone"},
 
 	// --- backups (real, not a placeholder) ---
 	"backups.subtitle":     {"uk": "Реальні tar.gz архіви сайтів.", "en": "Real tar.gz site archives."},
