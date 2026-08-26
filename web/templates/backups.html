@@ -1,0 +1,73 @@
+{{define "backups"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.backups"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.backups"}}</h1>
+        <p class="page-sub">{{t .Lang "backups.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form method="post" action="/server/backups" style="display:flex;gap:16px;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div style="flex:1;">
+          <label class="field-label">{{t .Lang "backups.form_source"}}</label>
+          <select class="input input-plain" name="source">
+            <option value="wwwroot">{{t .Lang "backups.source_wwwroot"}}</option>
+            {{range .Sites}}<option value="{{.ID}}">{{.Domain}}</option>{{end}}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "archive" 15}}{{t .Lang "backups.create_button"}}</button>
+      </form>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Backups}}
+      <div class="empty-inline">{{icon "archive" 26}}<p>{{t .Lang "backups.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:2.6fr 1fr 1.4fr 1fr;">
+        <span class="table-head">{{t .Lang "backups.table_name"}}</span>
+        <span class="table-head">{{t .Lang "backups.table_size"}}</span>
+        <span class="table-head">{{t .Lang "backups.table_created"}}</span>
+        <span></span>
+      </div>
+      {{range .Backups}}
+      <div class="accounts-row" style="grid-template-columns:2.6fr 1fr 1.4fr 1fr;">
+        <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text);">{{.Name}}</span>
+        <span class="cell-muted">{{humanSize .SizeBytes}}</span>
+        <span class="cell-muted">{{.ModTime.Format "Jan 2, 2006 15:04"}}</span>
+        <span class="row-actions">
+          <a href="/server/backups/download?name={{.Name}}" class="link-action">{{icon "download" 14}}</a>
+          <form method="post" action="/server/backups/delete" onsubmit="return confirm('{{t $.Lang "files.confirm_delete"}}');">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

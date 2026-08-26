@@ -1,0 +1,97 @@
+{{define "dashboard"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "dashboard.title"}}</h1>
+        <p class="page-sub">{{.Hostname}} · {{.OS}} · uptime {{.Uptime}}</p>
+      </div>
+      <div class="status-pill"><span class="status-dot"></span>{{t .Lang "dashboard.live"}}</div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="ring"><div class="ring-bg" id="ring-cpu" style="--pct:0;--ring-color:var(--accent);"></div><div class="ring-hole"><span class="ring-value" id="val-cpu">–</span></div></div>
+        <div>
+          <div class="metric-label">{{t .Lang "dashboard.cpu"}}</div>
+          <div class="metric-detail" id="detail-cpu">{{.CPUCores}} {{t .Lang "dashboard.cores"}}</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="ring"><div class="ring-bg" id="ring-mem" style="--pct:0;--ring-color:var(--warn);"></div><div class="ring-hole"><span class="ring-value" id="val-mem">–</span></div></div>
+        <div>
+          <div class="metric-label">{{t .Lang "dashboard.memory"}}</div>
+          <div class="metric-detail" id="detail-mem">– / – GB</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="ring"><div class="ring-bg" id="ring-disk" style="--pct:0;--ring-color:var(--accent);"></div><div class="ring-hole"><span class="ring-value" id="val-disk">–</span></div></div>
+        <div>
+          <div class="metric-label">{{t .Lang "dashboard.disk"}}</div>
+          <div class="metric-detail" id="detail-disk">– / – GB</div>
+        </div>
+      </div>
+
+      <div class="metric-card net-card">
+        <div class="net-head">
+          <span class="metric-label" style="margin-bottom:0;">{{t .Lang "dashboard.network"}}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">{{.NetIface}}</span>
+        </div>
+        <svg class="net-chart" width="100%" height="40" viewBox="0 0 220 40" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="netfill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="var(--accent)" stop-opacity="0.35"/>
+              <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polyline id="net-line" points="" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polygon id="net-fill" points="" fill="url(#netfill)"/>
+        </svg>
+        <div class="net-foot">
+          <span class="net-down" id="val-net-down">↓ – MB/s</span>
+          <span class="net-up" id="val-net-up">↑ – MB/s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "dashboard.sites_title"}}</span></div>
+        <div class="empty-inline">
+          {{icon "globe" 26}}
+          <p>{{t .Lang "dashboard.sites_empty"}}</p>
+          <div class="sub">{{t .Lang "dashboard.sites_empty_sub"}}</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "dashboard.activity_title"}}</span></div>
+        <div class="empty-inline">
+          {{icon "bell" 26}}
+          <p>{{t .Lang "dashboard.activity_empty"}}</p>
+          <div class="sub">{{t .Lang "dashboard.activity_empty_sub"}}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
+{{end}}

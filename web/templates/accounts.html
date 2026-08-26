@@ -1,0 +1,159 @@
+{{define "accounts"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "accounts.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "accounts.title"}}</h1>
+        <p class="page-sub">{{len .Accounts}}</p>
+      </div>
+    </div>
+
+    {{if .NewUsername}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "accounts.created_title"}}</div>
+      <div class="created-banner-row">
+        <span class="kbd">{{.NewUsername}}</span>
+        <span class="kbd">{{.NewPassword}}</span>
+      </div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+    <details class="add-account">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "accounts.add_button"}}</summary>
+      <form class="add-account-form" method="post" action="/accounts" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid">
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_last_name"}}</label>
+            <input class="input input-plain" type="text" name="last_name">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_first_name"}}</label>
+            <input class="input input-plain" type="text" name="first_name">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_patronymic"}}</label>
+            <input class="input input-plain" type="text" name="patronymic">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_department"}}</label>
+            <select class="input input-plain" name="department_id">
+              <option value="">{{t .Lang "accounts.form_none"}}</option>
+              {{range .Departments}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_position"}}</label>
+            <select class="input input-plain" name="position_id">
+              <option value="">{{t .Lang "accounts.form_none"}}</option>
+              {{range .Positions}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_username"}}</label>
+            <input class="input input-plain" type="text" name="username" required>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_email"}}</label>
+            <input class="input input-plain" type="email" name="email">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_phone"}}</label>
+            <input class="input input-plain" type="text" name="phone">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_hired_at"}}</label>
+            <input class="input input-plain" type="date" name="hired_at">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_role"}}</label>
+            <select class="input input-plain" name="role">
+              <option value="member">{{t .Lang "accounts.role.member"}}</option>
+              <option value="admin">{{t .Lang "accounts.role.admin"}}</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_avatar"}}</label>
+            <input class="input input-plain" type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif">
+          </div>
+        </div>
+
+        <label class="field-label" style="display:block;margin-top:18px;">{{t .Lang "accounts.form_permissions"}}</label>
+        <div class="permission-grid">
+          <label class="permission-check"><input type="checkbox" name="permissions" value="sites">{{t .Lang "accounts.permission.sites"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="files">{{t .Lang "accounts.permission.files"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="databases">{{t .Lang "accounts.permission.databases"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="network">{{t .Lang "accounts.permission.network"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="server">{{t .Lang "accounts.permission.server"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="servicedesk">{{t .Lang "accounts.permission.servicedesk"}}</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:18px;">{{t .Lang "accounts.form_submit"}}</button>
+      </form>
+    </details>
+
+    <div class="panel table-panel">
+      <div class="accounts-row accounts-row-head">
+        <span class="table-head">{{t .Lang "accounts.table_account"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_position"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_role"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_hired"}}</span>
+        <span></span>
+      </div>
+
+      {{range .Accounts}}
+      <div class="accounts-row">
+        <a href="/accounts/{{.ID}}" class="account-cell">
+          {{if .HasAvatar}}<img class="avatar-photo" src="/accounts/{{.ID}}/avatar" alt="">{{else}}<div class="avatar avatar-sm">{{initials .DisplayName}}</div>{{end}}
+          <div>
+            <div class="account-cell-name">{{.DisplayName}}</div>
+            <div class="account-cell-username">@{{.Username}}</div>
+          </div>
+        </a>
+        <span class="cell-muted">{{if .PositionName}}{{.PositionName}}{{else if .JobTitle}}{{.JobTitle}}{{else}}—{{end}}</span>
+        <span class="role-badge role-{{.Role}}">{{if eq .Role "admin"}}{{t $.Lang "accounts.role.admin"}}{{else}}{{t $.Lang "accounts.role.member"}}{{end}}</span>
+        <span class="status-badge status-{{.Status}}">{{if eq .Status "active"}}{{t $.Lang "accounts.status.active"}}{{else}}{{t $.Lang "accounts.status.disabled"}}{{end}}</span>
+        <span class="cell-muted">{{if .HiredAt}}{{.HiredAt}}{{else}}—{{end}}</span>
+        <span class="row-actions">
+          <a href="/accounts/{{.ID}}/edit" class="link-action">{{t $.Lang "accounts.action.edit"}}</a>
+          <form method="post" action="/accounts/{{.ID}}/status">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{if eq .Status "active"}}{{t $.Lang "accounts.action.disable"}}{{else}}{{t $.Lang "accounts.action.enable"}}{{end}}</button>
+          </form>
+          <form method="post" action="/accounts/{{.ID}}/terminate">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{t $.Lang "accounts.action.terminate"}}</button>
+          </form>
+          <form method="post" action="/accounts/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+    </div>
+
+  </div>
+</div>
+<script src="/static/js/accounts.js"></script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,94 @@
+{{define "integrations"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.integrations"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.integrations"}}</h1>
+        <p class="page-sub">{{t .Lang "integrations.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="error-banner" style="background:rgba(255,138,61,0.10);border-color:rgba(255,138,61,0.35);color:#ffb37a;">{{t .Lang "integrations.intro"}}</div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+    {{if .NewKeyToken}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "integrations.key_ready_title"}} — {{.NewKeyName}}</div>
+      <div class="created-banner-row"><span class="kbd" style="font-size:12px;word-break:break-all;">{{.NewKeyToken}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "integrations.key_ready_hint"}}</div>
+    </div>
+    {{end}}
+
+    <details class="add-account" style="margin-bottom:16px;">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "integrations.add_button"}}</summary>
+      <form class="add-account-form" method="post" action="/company/integrations/keys">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid" style="grid-template-columns:2fr auto;align-items:end;">
+          <div>
+            <label class="field-label">{{t .Lang "integrations.form_name"}}</label>
+            <input class="input input-plain" type="text" name="name" required>
+          </div>
+          <button type="submit" class="btn btn-primary">{{t .Lang "integrations.create_button"}}</button>
+        </div>
+      </form>
+    </details>
+
+    <div class="panel table-panel" style="margin-bottom:16px;">
+      {{if not .Keys}}
+      <div class="empty-inline">{{icon "plug" 26}}<p>{{t .Lang "integrations.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.4fr 1.2fr 1fr 1.2fr 1fr;">
+        <span class="table-head">{{t .Lang "integrations.table_name"}}</span>
+        <span class="table-head">{{t .Lang "integrations.table_prefix"}}</span>
+        <span class="table-head">{{t .Lang "integrations.table_created_by"}}</span>
+        <span class="table-head">{{t .Lang "integrations.table_last_used"}}</span>
+        <span></span>
+      </div>
+      {{range .Keys}}
+      <div class="accounts-row" style="grid-template-columns:1.4fr 1.2fr 1fr 1.2fr 1fr;{{if .RevokedAt}}opacity:0.5;{{end}}">
+        <span style="font-size:13.5px;color:var(--text);">{{.Name}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.KeyPrefix}}…</span>
+        <span class="cell-muted">{{.CreatedBy}}</span>
+        <span class="cell-muted">{{if .RevokedAt}}{{t $.Lang "integrations.revoked"}}{{else if .LastUsedAt}}{{.LastUsedAt.Format "Jan 2, 15:04"}}{{else}}{{t $.Lang "integrations.never_used"}}{{end}}</span>
+        <span class="row-actions">
+          {{if not .RevokedAt}}
+          <form method="post" action="/company/integrations/keys/{{.ID}}/revoke">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{t $.Lang "integrations.revoke"}}</button>
+          </form>
+          {{end}}
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+    <div class="panel" style="padding:22px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "integrations.api_title"}}</span></div>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">{{t .Lang "integrations.api_desc"}}</p>
+      <pre class="input input-plain" style="font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;">curl -X POST {{.Hostname}}/api/v1/tickets \
+  -H "Authorization: Bearer kur_..." \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Disk usage above 90%","description":"from monitoring","topic":"server","priority":"high"}'</pre>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

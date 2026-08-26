@@ -1,0 +1,99 @@
+{{define "databases"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.databases"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.databases"}}</h1>
+        <p class="page-sub">{{t .Lang "databases.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;margin-bottom:20px;">
+      <div class="server-card" style="flex:1;padding:14px 18px;{{if not .MySQLStatus.Reachable}}opacity:0.55;{{end}}">
+        <span class="status-dot" style="background:{{if .MySQLStatus.Reachable}}var(--good){{else}}var(--muted){{end}};"></span>
+        <div>
+          <div style="font-size:13.5px;color:var(--text);font-weight:500;">MySQL</div>
+          <div class="server-card-meta">{{if .MySQLStatus.Reachable}}{{t .Lang "databases.mysql_via"}}{{else}}{{t .Lang "databases.mysql_not_found"}}{{end}}</div>
+        </div>
+      </div>
+      <div class="server-card" style="flex:1;padding:14px 18px;{{if not .PostgresStatus.Reachable}}opacity:0.55;{{end}}">
+        <span class="status-dot" style="background:{{if .PostgresStatus.Reachable}}var(--good){{else}}var(--muted){{end}};"></span>
+        <div>
+          <div style="font-size:13.5px;color:var(--text);font-weight:500;">PostgreSQL</div>
+          <div class="server-card-meta">{{if .PostgresStatus.Reachable}}{{t .Lang "databases.mysql_via"}}{{else}}{{t .Lang "databases.mysql_not_found"}}{{end}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <a href="/databases?engine=mysql" class="lang-flag" style="width:auto;padding:8px 16px;border-radius:100px;font-family:var(--font-mono);font-size:12.5px;{{if eq .Engine "mysql"}}background:linear-gradient(135deg,var(--accent),#ffb800);color:var(--accent-ink);filter:none;{{else}}color:var(--muted);{{end}}">MySQL</a>
+      <a href="/databases?engine=postgres" class="lang-flag" style="width:auto;padding:8px 16px;border-radius:100px;font-family:var(--font-mono);font-size:12.5px;{{if eq .Engine "postgres"}}background:linear-gradient(135deg,var(--accent),#ffb800);color:var(--accent-ink);filter:none;{{else}}color:var(--muted);{{end}}">PostgreSQL</a>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+    {{if and .ErrorDetail (not .FormErrorKey)}}<div class="error-banner">{{.ErrorDetail}}</div>{{end}}
+
+    {{if .NewUsername}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "databases.created_title"}}: {{.NewDBName}}</div>
+      <div class="created-banner-row"><span class="kbd">{{.NewUsername}}</span><span class="kbd">{{.NewPassword}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form method="post" action="/databases?engine={{.Engine}}" style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "databases.form_name"}}</label>
+          <input class="input input-plain" type="text" name="name" placeholder="my_app" required>
+        </div>
+        <label class="permission-check" style="margin-bottom:0;">
+          <input type="checkbox" name="create_user"> {{t .Lang "databases.form_create_user"}}
+        </label>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "databases.add_button"}}</button>
+      </form>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Databases}}
+      <div class="empty-inline">{{icon "database" 26}}<p>{{t .Lang "databases.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:3fr 1fr;">
+        <span class="table-head">{{t .Lang "databases.table_name"}}</span>
+        <span></span>
+      </div>
+      {{range .Databases}}
+      <div class="accounts-row" style="grid-template-columns:3fr 1fr;">
+        <span style="font-family:var(--font-mono);font-size:13.5px;color:var(--text);">{{.}}</span>
+        <span class="row-actions">
+          <form method="post" action="/databases/drop?engine={{$.Engine}}" onsubmit="return confirm('{{t $.Lang "files.confirm_delete"}}');">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="name" value="{{.}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      --bg: oklch(0.15 0.012 250);
+      --panel: oklch(0.195 0.013 250);
+      --panel-2: oklch(0.24 0.014 250);
+      --border: oklch(0.32 0.014 250 / 0.65);
+      --text: oklch(0.94 0.01 250);
+      --muted: oklch(0.60 0.02 250);
+      --accent: oklch(0.75 0.14 195);
+      --accent-2: oklch(0.72 0.15 165);
+      --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --shadow: 0 1px 0 oklch(1 0 0 / 0.03) inset, 0 16px 32px -16px oklch(0 0 0 / 0.5);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: oklch(0.82 0.14 195); }
+    ::placeholder { color: oklch(0.46 0.015 250); }
+  </style>
+</helmet>
+<div style="width:1440px; height:900px; background:var(--bg); display:flex; box-sizing:border-box; overflow:hidden;">
+
+  <dc-import name="Sidebar" active="files" hint-size="240px,900px"></dc-import>
+
+  <div style="flex:1; padding:28px 40px 40px; box-sizing:border-box;">
+
+    <dc-import name="Topbar" hint-size="1200px,68px"></dc-import>
+
+    <div style="margin-bottom:18px;">
+      <h1 style="margin:0 0 8px; font-size:26px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">File Manager</h1>
+      <div style="font-family:var(--mono); font-size:13px; color:var(--muted);">
+        <a href="#">www</a> <span style="color:oklch(0.40 0.015 250);">/</span> <a href="#">example.com</a> <span style="color:oklch(0.40 0.015 250);">/</span> <span style="color:var(--text);">public</span>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+      <div style="flex:1; display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:9px 14px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span style="font-family:var(--mono); font-size:12.5px; color:oklch(0.46 0.015 250);">Search files…</span>
+      </div>
+      <button style="display:flex; align-items:center; gap:8px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 16px; font-family:var(--mono); font-size:12.5px; cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14a2 2 0 0 0 2-2v-5"/><path d="M3 14v5a2 2 0 0 0 2 2"/></svg>
+        Upload
+      </button>
+      <button style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:oklch(0.15 0.012 250); border:none; border-radius:10px; padding:10px 16px; font-family:var(--mono); font-size:12.5px; font-weight:600; cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><line x1="12" y1="11" x2="12" y2="15"/><line x1="10" y1="13" x2="14" y2="13"/></svg>
+        New Folder
+      </button>
+    </div>
+
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:var(--shadow);">
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:14px 22px; border-bottom:1px solid var(--border);">
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Name</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Size</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Modified</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Permissions</span>
+        <span></span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:12px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--text); font-weight:500;">
+          <span style="width:28px; height:28px; border-radius:8px; background:oklch(0.72 0.14 195 / 0.14); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          assets
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">—</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Aug 20, 2026</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">drwxr-xr-x</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:12px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--text); font-weight:500;">
+          <span style="width:28px; height:28px; border-radius:8px; background:oklch(0.72 0.14 195 / 0.14); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          uploads
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">—</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Aug 18, 2026</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">drwxr-xr-x</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:12px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--text);">
+          <span style="width:28px; height:28px; border-radius:8px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          index.php
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">2.4 KB</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Aug 24, 2026</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">-rw-r--r--</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:12px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--text);">
+          <span style="width:28px; height:28px; border-radius:8px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          wp-config.php
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">1.1 KB</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Aug 12, 2026</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">-rw-------</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.6fr 1fr 1.2fr 1.4fr 0.5fr; padding:12px 22px; align-items:center;">
+        <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--text);">
+          <span style="width:28px; height:28px; border-radius:8px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          .htaccess
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">0.3 KB</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Jun 30, 2026</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">-rw-r--r--</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

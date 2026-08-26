@@ -1,0 +1,216 @@
+{{define "ticket"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Ticket.Title}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <a href="/company/servicedesk" class="back-link">{{t .Lang "ticket.back"}}</a>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title" style="font-family:var(--font-mono);">{{.Ticket.DisplayID}}</h1>
+        <p class="page-sub" style="font-size:14px; color:var(--text); font-family:var(--font-sans); margin-bottom:6px;">{{.Ticket.Title}}</p>
+        <p class="page-sub">
+          <span class="role-badge role-{{if or (eq .Ticket.Priority "critical") (eq .Ticket.Priority "high")}}admin{{else}}member{{end}}">{{t .Lang (print "servicedesk.priority." .Ticket.Priority)}}</span>
+          <span class="status-badge status-{{if eq .Ticket.Status "resolved"}}active{{else if eq .Ticket.Status "closed"}}disabled{{else}}active{{end}}" style="margin-left:8px;">{{t .Lang (print "servicedesk.status." .Ticket.Status)}}</span>
+          <span class="cell-muted" style="margin-left:8px;">{{topicLabel .Lang .Ticket.Topic}}</span>
+          {{if .Ticket.IsOverdue}}<span style="color:var(--bad); font-family:var(--font-mono); font-size:11px; margin-left:8px;">{{t .Lang "servicedesk.overdue"}}</span>{{end}}
+        </p>
+      </div>
+    </div>
+
+    {{if .NewUsername}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "ticket.account_created_from_ticket"}}</div>
+      <div class="created-banner-row"><span class="kbd">{{.NewUsername}}</span><span class="kbd">{{.NewPassword}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    {{if .Ticket.RequestKind}}
+    <div class="panel" style="margin-bottom:16px;">
+      {{if eq .Ticket.RequestKind "grant_access"}}
+        <div class="panel-head"><span class="panel-title">{{t .Lang "servicedesk.request_kind.grant_access"}}</span></div>
+        <div class="info-chips">
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "ticket.target_user"}}</span><span class="info-chip-value">{{if .Ticket.TargetUserName}}{{.Ticket.TargetUserName}}{{else}}—{{end}}</span></div>
+          {{$lang := .Lang}}
+          {{range .Ticket.RequestedPermissionsList}}<span class="info-chip"><span class="info-chip-value">{{t $lang (print "accounts.permission." .)}}</span></span>{{end}}
+        </div>
+        {{if .Ticket.ActionApplied}}
+          <p style="font-size:12px; color:var(--good); margin-top:14px;">{{t .Lang "ticket.access_granted_notice"}}</p>
+        {{else if and .IsAgent .Ticket.TargetUserID}}
+          {{if and .Ticket.RequiresApproval (ne .Ticket.ApprovalStatus "approved")}}
+            <p style="font-size:12px; color:var(--muted); margin-top:14px;">{{t .Lang "ticket.waiting_for_approval_notice_access"}}</p>
+          {{else}}
+            <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/grant-access" style="margin-top:14px;">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <button type="submit" class="btn btn-primary">{{icon "shield" 15}}{{t .Lang "ticket.grant_access_button"}}</button>
+            </form>
+          {{end}}
+        {{end}}
+      {{else if eq .Ticket.RequestKind "terminate"}}
+        <div class="panel-head"><span class="panel-title">{{t .Lang "servicedesk.request_kind.terminate"}}</span></div>
+        <div class="info-chips">
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "ticket.target_user"}}</span><span class="info-chip-value">{{if .Ticket.TargetUserName}}{{.Ticket.TargetUserName}}{{else}}—{{end}}</span></div>
+        </div>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">{{t .Lang "servicedesk.terminate_notice"}}</p>
+        {{if .Ticket.ActionApplied}}
+          <p style="font-size:12px; color:var(--good); margin-top:14px;">{{t .Lang "ticket.employee_terminated_notice"}}</p>
+        {{else if and .IsAgent .Ticket.TargetUserID}}
+          {{if and .Ticket.RequiresApproval (ne .Ticket.ApprovalStatus "approved")}}
+            <p style="font-size:12px; color:var(--muted); margin-top:10px;">{{t .Lang "ticket.waiting_for_approval_notice_terminate"}}</p>
+          {{else}}
+            <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/terminate-target" style="margin-top:14px;">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <button type="submit" class="btn btn-danger">{{icon "lock" 15}}{{t .Lang "ticket.terminate_button"}}</button>
+            </form>
+          {{end}}
+        {{end}}
+      {{else if eq .Ticket.RequestKind "new_account"}}
+        <div class="panel-head"><span class="panel-title">{{t .Lang "ticket.new_account_data"}}</span></div>
+        <div class="info-chips">
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "accounts.form_last_name"}}</span><span class="info-chip-value">{{.Ticket.NewLastName}}</span></div>
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "accounts.form_first_name"}}</span><span class="info-chip-value">{{.Ticket.NewFirstName}}</span></div>
+          {{if .Ticket.NewPatronymic}}<div class="info-chip"><span class="info-chip-label">{{t .Lang "accounts.form_patronymic"}}</span><span class="info-chip-value">{{.Ticket.NewPatronymic}}</span></div>{{end}}
+          {{if .Ticket.NewEmail}}<div class="info-chip"><span class="info-chip-label">{{t .Lang "servicedesk.form_email"}}</span><span class="info-chip-value">{{.Ticket.NewEmail}}</span></div>{{end}}
+          {{if .Ticket.NewPhone}}<div class="info-chip"><span class="info-chip-label">{{t .Lang "servicedesk.form_phone"}}</span><span class="info-chip-value">{{.Ticket.NewPhone}}</span></div>{{end}}
+          {{if .Ticket.NewHiredAt}}<div class="info-chip"><span class="info-chip-label">{{t .Lang "accounts.form_hired_at"}}</span><span class="info-chip-value">{{.Ticket.NewHiredAt}}</span></div>{{end}}
+        </div>
+        {{if and .IsAgent (not .Ticket.CreatedAccountID)}}
+          {{if and .Ticket.RequiresApproval (ne .Ticket.ApprovalStatus "approved")}}
+            <p style="font-size:12px; color:var(--muted); margin-top:14px;">{{t .Lang "ticket.waiting_for_approval_notice"}}</p>
+          {{else}}
+            <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/create-account" style="margin-top:14px;">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <button type="submit" class="btn btn-primary">{{icon "users" 15}}{{t .Lang "ticket.create_account_button"}}</button>
+            </form>
+          {{end}}
+        {{end}}
+      {{end}}
+    </div>
+    {{end}}
+
+    <div class="content-grid">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "servicedesk.form_description"}}</span></div>
+        {{if .Ticket.Reason}}<p style="font-family:var(--font-mono); font-size:12px; color:var(--accent); margin:0 0 10px;">{{.Ticket.Reason}}</p>{{end}}
+        <p style="font-size:13.5px; color:var(--text); white-space:pre-wrap; line-height:1.6;">{{if .Ticket.Description}}{{.Ticket.Description}}{{else}}—{{end}}</p>
+      </div>
+
+      <div class="panel">
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.requester"}}</span>
+          <span class="profile-field-value">{{.Ticket.RequesterName}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.assignee"}}</span>
+          <span class="profile-field-value">{{if .Ticket.AssigneeName}}{{.Ticket.AssigneeName}}{{else}}{{t .Lang "servicedesk.unassigned"}}{{end}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.due"}}</span>
+          <span class="profile-field-value">{{.Ticket.DueAt.Format "Jan 2, 2006 15:04"}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.created"}}</span>
+          <span class="profile-field-value">{{.Ticket.CreatedAt.Format "Jan 2, 2006 15:04"}}</span>
+        </div>
+        {{if .Ticket.RequiresApproval}}
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.approval_title"}}</span>
+          <span class="profile-field-value">
+            {{if eq .Ticket.ApprovalStatus "approved"}}<span class="status-badge status-active">{{t .Lang "ticket.approval.approved"}}</span>
+            {{else if eq .Ticket.ApprovalStatus "rejected"}}<span class="status-badge status-disabled">{{t .Lang "ticket.approval.rejected"}}</span>
+            {{else}}<span class="status-badge" style="background:rgba(255,138,61,0.14);color:var(--warn);">{{t .Lang "ticket.approval.pending"}}</span>{{end}}
+          </span>
+        </div>
+        {{if .Ticket.ApprovedByName}}
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "ticket.approved_by"}}</span>
+          <span class="profile-field-value">{{.Ticket.ApprovedByName}}</span>
+        </div>
+        {{end}}
+        {{if and .IsAdmin (eq .Ticket.ApprovalStatus "pending")}}
+        <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/approval" style="display:flex; gap:8px; margin-top:12px;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" name="decision" value="rejected" class="btn" style="flex:1;">{{t .Lang "ticket.reject"}}</button>
+          <button type="submit" name="decision" value="approved" class="btn btn-primary" style="flex:1;">{{t .Lang "ticket.approve"}}</button>
+        </form>
+        {{end}}
+        {{end}}
+
+        {{if .IsAgent}}
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+          <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/assign-me">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn" style="width:100%;">{{if .Ticket.AssigneeID}}{{t .Lang "ticket.unassign_me"}}{{else}}{{t .Lang "ticket.assign_me"}}{{end}}</button>
+          </form>
+
+          <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/assign" style="display:flex; gap:8px;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input class="input input-plain" type="text" name="username" list="assignable-users" placeholder="{{t .Lang "ticket.assign_search_placeholder"}}" style="flex:1;">
+            <datalist id="assignable-users">
+              {{range .AllUsers}}<option value="{{.Username}}">{{.DisplayName}}</option>{{end}}
+            </datalist>
+            <button type="submit" class="btn">{{t .Lang "ticket.assign_button"}}</button>
+          </form>
+
+          <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/status" style="display:flex; gap:8px;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <select class="input input-plain" name="status" style="flex:1;">
+              <option value="new"{{if eq .Ticket.Status "new"}} selected{{end}}>{{t .Lang "servicedesk.status.new"}}</option>
+              <option value="in_progress"{{if eq .Ticket.Status "in_progress"}} selected{{end}}>{{t .Lang "servicedesk.status.in_progress"}}</option>
+              <option value="resolved"{{if eq .Ticket.Status "resolved"}} selected{{end}}>{{t .Lang "servicedesk.status.resolved"}}</option>
+              <option value="closed"{{if eq .Ticket.Status "closed"}} selected{{end}}>{{t .Lang "servicedesk.status.closed"}}</option>
+            </select>
+            <button type="submit" class="btn btn-primary">{{t .Lang "ticket.change_status"}}</button>
+          </form>
+        </div>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px; padding:22px;">
+      <div class="panel-title" style="margin-bottom:16px;">{{t .Lang "ticket.comments_title"}}</div>
+
+      {{if not .Comments}}
+      <p style="font-size:12.5px; color:var(--muted);">{{t .Lang "ticket.no_comments"}}</p>
+      {{else}}
+      <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
+        {{range .Comments}}
+        <div style="display:flex; gap:12px;">
+          <div class="avatar avatar-sm">{{initials .AuthorName}}</div>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:2px;">
+              <span style="font-size:12.5px; font-weight:500; color:var(--text);">{{.AuthorName}}</span>
+              <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--muted);">{{.CreatedAt.Format "Jan 2, 15:04"}}</span>
+            </div>
+            <div style="font-size:13px; color:var(--text); white-space:pre-wrap;">{{.Body}}</div>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{end}}
+
+      <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/comments">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <textarea name="body" class="input input-plain" style="width:100%;min-height:70px;" placeholder="{{t .Lang "ticket.comment_placeholder"}}" required></textarea>
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{t .Lang "ticket.comment_submit"}}</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

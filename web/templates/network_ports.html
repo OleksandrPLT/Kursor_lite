@@ -1,0 +1,96 @@
+{{define "network_ports"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.ports"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.ports"}}</h1>
+        <p class="page-sub">{{t .Lang "ports.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .Backend}}
+      {{if not .UFWInstalled}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "ports.ufw_not_installed"}}</span>
+        <form method="post" action="/network/ports/install-ufw" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "ports.install_ufw_button"}}</button>
+        </form>
+      </div>
+      {{else}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "ports.not_detected"}} {{t .Lang "ports.enable_ufw_warning"}}</span>
+        <form method="post" action="/network/ports/enable-ufw" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{t .Lang "ports.enable_ufw_button"}}</button>
+        </form>
+      </div>
+      {{end}}
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    {{if .Backend}}
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form method="post" action="/network/ports/open" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_port"}}</label>
+          <input class="input input-plain" type="number" name="port" min="1" max="65535" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_proto"}}</label>
+          <select class="input input-plain" name="proto">
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "ports.open_button"}}</button>
+      </form>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Rules}}
+      <div class="empty-inline">{{icon "toggles" 26}}<p>{{t .Lang "ports.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1fr 1fr 1fr;">
+        <span class="table-head">{{t .Lang "ports.table_port"}}</span>
+        <span class="table-head">{{t .Lang "ports.table_proto"}}</span>
+        <span></span>
+      </div>
+      {{range .Rules}}
+      <div class="accounts-row" style="grid-template-columns:1fr 1fr 1fr;">
+        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Port}}</span>
+        <span class="cell-muted">{{.Proto}}</span>
+        <span class="row-actions">
+          <form method="post" action="/network/ports/close">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="port" value="{{.Port}}">
+            <input type="hidden" name="proto" value="{{.Proto}}">
+            <button type="submit" class="link-action link-danger">{{t $.Lang "ports.close_button"}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+    {{end}}
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

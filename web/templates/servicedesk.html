@@ -1,0 +1,198 @@
+{{define "servicedesk"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.servicedesk"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.servicedesk"}}</h1>
+        <p class="page-sub">{{if .IsAgent}}{{t .Lang "servicedesk.subtitle_agent"}}{{else}}{{t .Lang "servicedesk.subtitle_own"}}{{end}}</p>
+      </div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+    <details class="add-account">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "servicedesk.add_button"}}</summary>
+      <form class="add-account-form" method="post" action="/company/servicedesk" data-lang="{{.Lang}}">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr;">
+          <div>
+            <label class="field-label">{{t .Lang "servicedesk.form_title"}}</label>
+            <input class="input input-plain" type="text" name="title" required>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "servicedesk.form_type"}}</label>
+            <select class="input input-plain" name="type">
+              <option value="incident">{{t .Lang "servicedesk.type.incident"}}</option>
+              <option value="request">{{t .Lang "servicedesk.type.request"}}</option>
+              <option value="problem">{{t .Lang "servicedesk.type.problem"}}</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "servicedesk.form_priority"}}</label>
+            <select class="input input-plain" name="priority">
+              <option value="low">{{t .Lang "servicedesk.priority.low"}}</option>
+              <option value="medium" selected>{{t .Lang "servicedesk.priority.medium"}}</option>
+              <option value="high">{{t .Lang "servicedesk.priority.high"}}</option>
+              <option value="critical">{{t .Lang "servicedesk.priority.critical"}}</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "servicedesk.form_topic"}}</label>
+            <select class="input input-plain" name="topic">
+              {{$lang := .Lang}}
+              {{range .Topics}}<option value="{{.Key}}">{{topicLabel $lang .Key}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "servicedesk.form_reason"}}</label>
+            <select class="input input-plain" name="reason"></select>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <label class="field-label">{{t .Lang "servicedesk.form_description"}}</label>
+          <textarea name="description" class="input input-plain" style="width:100%;min-height:90px;"></textarea>
+        </div>
+
+        <div id="request-kind-block" style="margin-top:16px; display:none;">
+          <label class="field-label">{{t .Lang "servicedesk.form_request_kind"}}</label>
+          <select class="input input-plain" name="request_kind" id="request-kind-select">
+            <option value="">{{t .Lang "servicedesk.request_kind.none"}}</option>
+            <option value="grant_access" data-only-accounts="0">{{t .Lang "servicedesk.request_kind.grant_access"}}</option>
+            <option value="new_account" data-only-accounts="1">{{t .Lang "servicedesk.request_kind.new_account"}}</option>
+            <option value="terminate" data-only-accounts="1">{{t .Lang "servicedesk.request_kind.terminate"}}</option>
+          </select>
+        </div>
+
+        <div id="target-user-block" style="margin-top:16px; display:none;">
+          <label class="field-label">{{t .Lang "servicedesk.form_target_user"}}</label>
+          <input class="input input-plain" type="text" name="target_username" list="sd-all-users" placeholder="{{t .Lang "ticket.assign_search_placeholder"}}" style="width:100%;">
+        </div>
+
+        <div id="permissions-block" style="margin-top:16px; display:none;">
+          <label class="field-label" style="display:block;margin-bottom:10px;">{{t .Lang "servicedesk.form_permissions"}}</label>
+          <div class="permission-grid" style="margin-top:0;">
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="sites">{{t .Lang "accounts.permission.sites"}}</label>
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="files">{{t .Lang "accounts.permission.files"}}</label>
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="databases">{{t .Lang "accounts.permission.databases"}}</label>
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="network">{{t .Lang "accounts.permission.network"}}</label>
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="server">{{t .Lang "accounts.permission.server"}}</label>
+            <label class="permission-check"><input type="checkbox" name="requested_permissions" value="servicedesk">{{t .Lang "accounts.permission.servicedesk"}}</label>
+          </div>
+        </div>
+
+        <div id="new-account-block" style="margin-top:16px; display:none; background:var(--panel-2); border-radius:10px; padding:16px;">
+          <div class="field-label" style="margin-bottom:12px;">{{t .Lang "servicedesk.new_account_title"}}</div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+            <div>
+              <label class="field-label">{{t .Lang "accounts.form_last_name"}}</label>
+              <input class="input input-plain" type="text" name="new_last_name">
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "accounts.form_first_name"}}</label>
+              <input class="input input-plain" type="text" name="new_first_name">
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "accounts.form_patronymic"}}</label>
+              <input class="input input-plain" type="text" name="new_patronymic">
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "servicedesk.form_department"}}</label>
+              <select class="input input-plain" name="new_department_id">
+                <option value="">{{t .Lang "accounts.form_none"}}</option>
+                {{range .Departments}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+              </select>
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "servicedesk.form_position"}}</label>
+              <select class="input input-plain" name="new_position_id">
+                <option value="">{{t .Lang "accounts.form_none"}}</option>
+                {{range .Positions}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+              </select>
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "servicedesk.form_email"}}</label>
+              <input class="input input-plain" type="email" name="new_email">
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "servicedesk.form_phone"}}</label>
+              <input class="input input-plain" type="text" name="new_phone">
+            </div>
+            <div>
+              <label class="field-label">{{t .Lang "accounts.form_hired_at"}}</label>
+              <input class="input input-plain" type="date" name="new_hired_at">
+            </div>
+          </div>
+        </div>
+
+        <datalist id="sd-all-users">
+          {{range .AllUsers}}<option value="{{.Username}}">{{.DisplayName}}</option>{{end}}
+        </datalist>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">{{t .Lang "servicedesk.submit"}}</button>
+      </form>
+    </details>
+
+    <form method="get" action="/company/servicedesk" style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+      <input class="input input-plain" type="text" name="q" value="{{.Q}}" placeholder="{{t .Lang "servicedesk.search_placeholder"}}" style="flex:1; min-width:220px;">
+      <select class="input input-plain" name="topic" style="width:200px;">
+        <option value="all"{{if or (eq .TopicFilter "") (eq .TopicFilter "all")}} selected{{end}}>{{t .Lang "servicedesk.filter_all_topics"}}</option>
+        {{$lang := .Lang}}{{$tf := .TopicFilter}}
+        {{range .Topics}}<option value="{{.Key}}"{{if eq $tf .Key}} selected{{end}}>{{topicLabel $lang .Key}}</option>{{end}}
+      </select>
+      <select class="input input-plain" name="status" style="width:180px;">
+        <option value="all"{{if or (eq .StatusFilter "") (eq .StatusFilter "all")}} selected{{end}}>{{t .Lang "servicedesk.filter_all_statuses"}}</option>
+        <option value="new"{{if eq .StatusFilter "new"}} selected{{end}}>{{t .Lang "servicedesk.status.new"}}</option>
+        <option value="in_progress"{{if eq .StatusFilter "in_progress"}} selected{{end}}>{{t .Lang "servicedesk.status.in_progress"}}</option>
+        <option value="resolved"{{if eq .StatusFilter "resolved"}} selected{{end}}>{{t .Lang "servicedesk.status.resolved"}}</option>
+        <option value="closed"{{if eq .StatusFilter "closed"}} selected{{end}}>{{t .Lang "servicedesk.status.closed"}}</option>
+      </select>
+      <button type="submit" class="btn">{{icon "search" 14}}{{t .Lang "servicedesk.filter_button"}}</button>
+    </form>
+
+    <div class="panel table-panel">
+      {{if not .Tickets}}
+      <div class="empty-inline">{{icon "lifebuoy" 26}}<p>{{t .Lang "servicedesk.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:0.8fr 1.8fr 1fr 0.9fr 1fr 1fr 1.1fr;">
+        <span class="table-head">{{t .Lang "servicedesk.table_id"}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_title"}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_topic"}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_priority"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
+        <span class="table-head">{{if $.IsAgent}}{{t .Lang "servicedesk.table_requester"}}{{else}}{{t .Lang "servicedesk.table_assignee"}}{{end}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_due"}}</span>
+      </div>
+      {{range .Tickets}}
+      <a href="/company/servicedesk/{{.ID}}" class="accounts-row" style="grid-template-columns:0.8fr 1.8fr 1fr 0.9fr 1fr 1fr 1.1fr;text-decoration:none;">
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.DisplayID}}</span>
+        <span style="font-size:13.5px;color:var(--text);">{{.Title}}</span>
+        <span class="cell-muted">{{topicLabel $.Lang .Topic}}</span>
+        <span class="role-badge role-{{if or (eq .Priority "critical") (eq .Priority "high")}}admin{{else}}member{{end}}">{{t $.Lang (print "servicedesk.priority." .Priority)}}</span>
+        <span class="status-badge status-{{if eq .Status "resolved"}}active{{else if eq .Status "closed"}}disabled{{else}}active{{end}}">{{t $.Lang (print "servicedesk.status." .Status)}}</span>
+        <span class="cell-muted">{{if $.IsAgent}}{{.RequesterName}}{{else if .AssigneeName}}{{.AssigneeName}}{{else}}{{t $.Lang "servicedesk.unassigned"}}{{end}}</span>
+        <span class="cell-muted" style="{{if .IsOverdue}}color:var(--bad);{{end}}">{{.DueAt.Format "Jan 2, 15:04"}}{{if .IsOverdue}} · {{t $.Lang "servicedesk.overdue"}}{{end}}</span>
+      </a>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+<script src="/static/js/servicedesk.js"></script>
+</body>
+</html>
+{{end}}

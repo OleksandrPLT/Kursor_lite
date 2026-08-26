@@ -1,0 +1,127 @@
+{{define "account_edit"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "accounts.edit_title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <a href="/accounts/{{.Account.ID}}" class="back-link">{{t .Lang "accounts.profile.back"}}</a>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "accounts.edit_title"}}</h1>
+        <p class="page-sub">@{{.Account.Username}}</p>
+      </div>
+    </div>
+
+    {{if .NewPassword}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "accounts.new_password_title"}}</div>
+      <div class="created-banner-row"><span class="kbd">{{.NewPassword}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+    <div class="panel" style="padding:22px;">
+      <form method="post" action="/accounts/{{.Account.ID}}/edit" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid">
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_last_name"}}</label>
+            <input class="input input-plain" type="text" name="last_name" value="{{.Account.LastName}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_first_name"}}</label>
+            <input class="input input-plain" type="text" name="first_name" value="{{.Account.FirstName}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_patronymic"}}</label>
+            <input class="input input-plain" type="text" name="patronymic" value="{{.Account.Patronymic}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_department"}}</label>
+            <select class="input input-plain" name="department_id">
+              <option value="">{{t .Lang "accounts.form_none"}}</option>
+              {{$deptID := derefID .Account.DepartmentID}}
+              {{range .Departments}}<option value="{{.ID}}"{{if eq .ID $deptID}} selected{{end}}>{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_position"}}</label>
+            <select class="input input-plain" name="position_id">
+              <option value="">{{t .Lang "accounts.form_none"}}</option>
+              {{$posID := derefID .Account.PositionID}}
+              {{range .Positions}}<option value="{{.ID}}"{{if eq .ID $posID}} selected{{end}}>{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_email"}}</label>
+            <input class="input input-plain" type="email" name="email" value="{{.Account.Email}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_phone"}}</label>
+            <input class="input input-plain" type="text" name="phone" value="{{.Account.Phone}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_hired_at"}}</label>
+            <input class="input input-plain" type="date" name="hired_at" value="{{.Account.HiredAt}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.terminated_on"}}</label>
+            <input class="input input-plain" type="date" name="terminated_at" value="{{.Account.TerminatedAt}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_role"}}</label>
+            <select class="input input-plain" name="role">
+              <option value="member"{{if eq .Account.Role "member"}} selected{{end}}>{{t .Lang "accounts.role.member"}}</option>
+              <option value="admin"{{if eq .Account.Role "admin"}} selected{{end}}>{{t .Lang "accounts.role.admin"}}</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_avatar"}}</label>
+            <input class="input input-plain" type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif">
+          </div>
+        </div>
+
+        <label class="field-label" style="display:block;margin-top:18px;">{{t .Lang "accounts.form_permissions"}}</label>
+        <div class="permission-grid">
+          <label class="permission-check"><input type="checkbox" name="permissions" value="sites"{{if index .SelectedPerm "sites"}} checked{{end}}>{{t .Lang "accounts.permission.sites"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="files"{{if index .SelectedPerm "files"}} checked{{end}}>{{t .Lang "accounts.permission.files"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="databases"{{if index .SelectedPerm "databases"}} checked{{end}}>{{t .Lang "accounts.permission.databases"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="network"{{if index .SelectedPerm "network"}} checked{{end}}>{{t .Lang "accounts.permission.network"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="server"{{if index .SelectedPerm "server"}} checked{{end}}>{{t .Lang "accounts.permission.server"}}</label>
+          <label class="permission-check"><input type="checkbox" name="permissions" value="servicedesk"{{if index .SelectedPerm "servicedesk"}} checked{{end}}>{{t .Lang "accounts.permission.servicedesk"}}</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:20px;">{{t .Lang "accounts.save_changes"}}</button>
+      </form>
+    </div>
+
+    <div class="panel" style="padding:22px;margin-top:16px;">
+      <form method="post" action="/accounts/{{.Account.ID}}/reset-password" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <div>
+          <div class="panel-title" style="margin-bottom:4px;">{{t .Lang "accounts.reset_password"}}</div>
+          <p style="margin:0;font-size:12.5px;color:var(--muted);">{{t .Lang "accounts.reset_password_hint"}}</p>
+        </div>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="btn">{{t .Lang "accounts.reset_password"}}</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

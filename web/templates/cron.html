@@ -1,0 +1,85 @@
+{{define "cron"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "cron.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "cron.title"}}</h1>
+        <p class="page-sub">{{t .Lang "cron.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="error-banner" style="background:rgba(255,138,61,0.10);border-color:rgba(255,138,61,0.35);color:#ffb37a;">{{t .Lang "cron.security_note"}}</div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+    {{if .SyncWarning}}<div class="error-banner">{{t .Lang "cron.sync_warning"}} {{.SyncWarning}}</div>{{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form method="post" action="/server/cron" class="form-grid" style="grid-template-columns:1fr 2fr 1fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "cron.form_schedule"}}</label>
+          <input class="input input-plain" type="text" name="schedule" placeholder="0 3 * * *" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "cron.form_command"}}</label>
+          <input class="input input-plain" type="text" name="command" placeholder="/usr/bin/backup.sh" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "cron.form_label"}}</label>
+          <input class="input input-plain" type="text" name="label" placeholder="nightly backup">
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "cron.add"}}</button>
+      </form>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Jobs}}
+      <div class="empty-inline">{{icon "clock" 26}}<p>{{t .Lang "cron.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.2fr 2.4fr 1.2fr 0.8fr 1fr;">
+        <span class="table-head">{{t .Lang "cron.table_schedule"}}</span>
+        <span class="table-head">{{t .Lang "cron.table_command"}}</span>
+        <span class="table-head">{{t .Lang "cron.table_label"}}</span>
+        <span class="table-head">{{t .Lang "cron.table_status"}}</span>
+        <span></span>
+      </div>
+      {{range .Jobs}}
+      <div class="accounts-row" style="grid-template-columns:1.2fr 2.4fr 1.2fr 0.8fr 1fr;{{if not .Enabled}}opacity:0.55;{{end}}">
+        <span class="cell-muted" style="font-family:var(--font-mono);color:var(--text);">{{.Schedule}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Command}}</span>
+        <span class="cell-muted">{{if .Label}}{{.Label}}{{else}}—{{end}}</span>
+        <span class="status-badge status-{{if .Enabled}}active{{else}}disabled{{end}}">{{if .Enabled}}{{t $.Lang "accounts.status.active"}}{{else}}{{t $.Lang "accounts.status.disabled"}}{{end}}</span>
+        <span class="row-actions">
+          <form method="post" action="/server/cron/{{.ID}}/toggle">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{if .Enabled}}{{t $.Lang "accounts.action.disable"}}{{else}}{{t $.Lang "accounts.action.enable"}}{{end}}</button>
+          </form>
+          <form method="post" action="/server/cron/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

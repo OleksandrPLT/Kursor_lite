@@ -1,0 +1,104 @@
+{{define "network_dns"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.dns"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.dns"}}</h1>
+        <p class="page-sub">{{t .Lang "dns.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .Installed}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "dns.not_detected"}}</span>
+        <form method="post" action="/network/dns/install" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "dns.install_button"}}</button>
+        </form>
+      </div>
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form method="post" action="/network/dns" class="form-grid" id="dns-form" style="grid-template-columns:1.6fr 0.8fr 1.4fr 0.8fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "dns.form_name"}}</label>
+          <input class="input input-plain" type="text" name="name" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "dns.form_type"}}</label>
+          <select class="input input-plain" name="type" id="dns-type-select">
+            <option value="A">A</option>
+            <option value="AAAA">AAAA</option>
+            <option value="CNAME">CNAME</option>
+            <option value="MX">MX</option>
+            <option value="TXT">TXT</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "dns.form_value"}}</label>
+          <input class="input input-plain" type="text" name="value" required>
+        </div>
+        <div id="dns-priority-field" style="display:none;">
+          <label class="field-label">{{t .Lang "dns.form_priority"}}</label>
+          <input class="input input-plain" type="number" name="priority" value="10" min="0">
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "dns.create_button"}}</button>
+      </form>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Records}}
+      <div class="empty-inline">{{icon "tag" 26}}<p>{{t .Lang "dns.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.6fr 0.8fr 2fr 1fr;">
+        <span class="table-head">{{t .Lang "dns.table_name"}}</span>
+        <span class="table-head">{{t .Lang "dns.table_type"}}</span>
+        <span class="table-head">{{t .Lang "dns.table_value"}}</span>
+        <span></span>
+      </div>
+      {{range .Records}}
+      <div class="accounts-row" style="grid-template-columns:1.6fr 0.8fr 2fr 1fr;">
+        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Name}}</span>
+        <span class="cell-muted">{{.Type}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Value}}{{if eq .Type "MX"}} ({{.Priority}}){{end}}</span>
+        <span class="row-actions">
+          <form method="post" action="/network/dns/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+<script>
+  (function () {
+    var typeSelect = document.getElementById("dns-type-select");
+    var priorityField = document.getElementById("dns-priority-field");
+    function update() { priorityField.style.display = typeSelect.value === "MX" ? "block" : "none"; }
+    typeSelect.addEventListener("change", update);
+    update();
+  })();
+</script>
+</body>
+</html>
+{{end}}

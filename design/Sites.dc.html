@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      --bg: oklch(0.15 0.012 250);
+      --panel: oklch(0.195 0.013 250);
+      --panel-2: oklch(0.24 0.014 250);
+      --border: oklch(0.32 0.014 250 / 0.65);
+      --text: oklch(0.94 0.01 250);
+      --muted: oklch(0.60 0.02 250);
+      --accent: oklch(0.75 0.14 195);
+      --accent-2: oklch(0.72 0.15 165);
+      --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --good: oklch(0.72 0.15 150);
+      --shadow: 0 1px 0 oklch(1 0 0 / 0.03) inset, 0 16px 32px -16px oklch(0 0 0 / 0.5);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: oklch(0.82 0.14 195); }
+  </style>
+</helmet>
+<div style="width:1440px; height:900px; background:var(--bg); display:flex; box-sizing:border-box; overflow:hidden;">
+
+  <dc-import name="Sidebar" active="sites" hint-size="240px,900px"></dc-import>
+
+  <div style="flex:1; padding:28px 40px 40px; box-sizing:border-box;">
+
+    <dc-import name="Topbar" hint-size="1200px,68px"></dc-import>
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px;">
+      <div>
+        <h1 style="margin:0 0 6px; font-size:26px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">Sites</h1>
+        <p style="margin:0; font-family:var(--mono); font-size:12px; color:var(--muted);">4 sites · 3 enabled</p>
+      </div>
+      <button style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:oklch(0.15 0.012 250); border:none; border-radius:10px; padding:11px 18px; font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer; box-shadow: 0 12px 24px -10px oklch(0.72 0.15 180 / 0.5);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Site
+      </button>
+    </div>
+
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:var(--shadow);">
+
+      <div style="display:grid; grid-template-columns: 2.2fr 2.4fr 0.7fr 1fr 1fr 0.5fr; padding:14px 22px; border-bottom:1px solid var(--border);">
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Domain</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Document Root</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">PHP</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Status</span>
+        <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);">Created</span>
+        <span></span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.2fr 2.4fr 0.7fr 1fr 1fr 0.5fr; padding:14px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span style="width:28px; height:28px; border-radius:8px; background:oklch(0.72 0.15 150 / 0.14); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+          <span style="font-family:var(--mono); font-size:13.5px; font-weight:500; color:var(--text);">shop.example.com</span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">/www/wwwroot/shop.example.com</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">8.2</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="width:34px; height:19px; border-radius:100px; background:linear-gradient(135deg, var(--accent), var(--accent-2)); position:relative; display:inline-block;"><span style="position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:50%; background:oklch(0.15 0.012 250);"></span></span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Aug 12, 2026</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.2fr 2.4fr 0.7fr 1fr 1fr 0.5fr; padding:14px 22px; align-items:center; border-bottom:1px solid var(--border);">
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span style="width:28px; height:28px; border-radius:8px; background:oklch(0.72 0.15 150 / 0.14); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+          <span style="font-family:var(--mono); font-size:13.5px; font-weight:500; color:var(--text);">api.example.com</span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">/www/wwwroot/api.example.com</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">—</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="width:34px; height:19px; border-radius:100px; background:linear-gradient(135deg, var(--accent), var(--accent-2)); position:relative; display:inline-block;"><span style="position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:50%; background:oklch(0.15 0.012 250);"></span></span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Jul 30, 2026</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.2fr 2.4fr 0.7fr 1fr 1fr 0.5fr; padding:14px 22px; align-items:center; border-bottom:1px solid var(--border); opacity:0.6;">
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span style="width:28px; height:28px; border-radius:8px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+          <span style="font-family:var(--mono); font-size:13.5px; font-weight:500; color:var(--text);">staging.example.com</span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">/www/wwwroot/staging.example.com</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">8.2</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="width:34px; height:19px; border-radius:100px; background:var(--panel-2); position:relative; display:inline-block;"><span style="position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--muted);"></span></span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Jul 2, 2026</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2.2fr 2.4fr 0.7fr 1fr 1fr 0.5fr; padding:14px 22px; align-items:center;">
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span style="width:28px; height:28px; border-radius:8px; background:oklch(0.72 0.15 150 / 0.14); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+          <span style="font-family:var(--mono); font-size:13.5px; font-weight:500; color:var(--text);">blog.example.com</span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">/www/wwwroot/blog.example.com</span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">—</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="width:34px; height:19px; border-radius:100px; background:linear-gradient(135deg, var(--accent), var(--accent-2)); position:relative; display:inline-block;"><span style="position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:50%; background:oklch(0.15 0.012 250);"></span></span>
+        </span>
+        <span style="font-family:var(--mono); font-size:12px; color:var(--muted);">Jun 18, 2026</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

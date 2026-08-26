@@ -1,0 +1,33 @@
+{{define "placeholder"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang .TitleKey}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang .TitleKey}}</h1>
+        <p class="page-sub">{{.Hostname}} · {{.OS}}</p>
+      </div>
+    </div>
+    <div class="empty-state">
+      <div class="empty-state-icon">{{icon "construction" 26}}</div>
+      <h2>{{t .Lang .TitleKey}}</h2>
+      <p>{{t .Lang .DescKey}}</p>
+      <span class="badge">{{t .Lang "placeholder.badge"}}</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

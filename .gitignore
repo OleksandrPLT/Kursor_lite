@@ -1,0 +1,11 @@
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/kursord
+*.pem
+.DS_Store
+/configs/kursor.env
+/dist/
+

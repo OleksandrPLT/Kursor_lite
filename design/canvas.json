@@ -1,0 +1,21 @@
+{
+  "artboards": [
+    { "file": "Login.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Main.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Sites.dc.html", "x": 3120, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Files.dc.html", "x": 4680, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Databases.dc.html", "x": 6240, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Sidebar.dc.html", "x": 0, "y": 1040, "w": 240, "h": 900 },
+    { "file": "Topbar.dc.html", "x": 320, "y": 1040, "w": 1200, "h": 200 }
+  ],
+  "annotations": [
+    { "id": "note-login", "x": 0, "y": -60, "w": 1440, "text": "Login" },
+    { "id": "note-dashboard", "x": 1560, "y": -60, "w": 1440, "text": "Dashboard" },
+    { "id": "note-sites", "x": 3120, "y": -60, "w": 1440, "text": "Sites" },
+    { "id": "note-files", "x": 4680, "y": -60, "w": 1440, "text": "File Manager" },
+    { "id": "note-databases", "x": 6240, "y": -60, "w": 1440, "text": "Databases" },
+    { "id": "note-sidebar", "x": 0, "y": 980, "w": 240, "text": "Sidebar component" },
+    { "id": "note-topbar", "x": 320, "y": 980, "w": 1200, "text": "Topbar component" }
+  ],
+  "launch": { "view": "focused", "file": "Main.dc.html" }
+}

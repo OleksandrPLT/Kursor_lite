@@ -1,0 +1,76 @@
+{{define "ssl"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.ssl"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.ssl"}}</h1>
+        <p class="page-sub">{{t .Lang "ssl.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .CertbotInstalled}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "ssl.not_detected"}}</span>
+        <form method="post" action="/server/ssl/install-certbot" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "ssl.install_button"}}</button>
+        </form>
+      </div>
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <div class="panel table-panel">
+      {{if not .Rows}}
+      <div class="empty-inline">{{icon "lock" 26}}<p>{{t .Lang "ssl.no_sites"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.6fr 1.6fr 2fr 1.4fr;">
+        <span class="table-head">{{t .Lang "ssl.table_domain"}}</span>
+        <span class="table-head">{{t .Lang "ssl.table_status"}}</span>
+        <span class="table-head">{{t .Lang "ssl.form_email"}}</span>
+        <span></span>
+      </div>
+      {{range .Rows}}
+      <div class="accounts-row" style="grid-template-columns:1.6fr 1.6fr 2fr 1.4fr;">
+        <span style="font-family:var(--font-mono);font-size:13.5px;color:var(--text);">{{.Domain}}</span>
+        {{if .Cert.Exists}}
+          {{if lt .Cert.DaysLeft 0}}
+            <span class="status-badge status-disabled">{{t $.Lang "ssl.status.expired"}}</span>
+          {{else if lt .Cert.DaysLeft 21}}
+            <span class="status-badge" style="background:rgba(255,138,61,0.14);color:var(--warn);">{{t $.Lang "ssl.status.expiring"}} · {{.Cert.DaysLeft}} {{t $.Lang "ssl.days_left"}}</span>
+          {{else}}
+            <span class="status-badge status-active">{{t $.Lang "ssl.status.valid"}} · {{.Cert.DaysLeft}} {{t $.Lang "ssl.days_left"}}</span>
+          {{end}}
+        {{else}}
+          <span class="status-badge status-disabled">{{t $.Lang "ssl.status.none"}}</span>
+        {{end}}
+        <form method="post" action="/server/ssl/{{.ID}}/issue" style="display:contents;">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <span><input class="input input-plain" type="email" name="email" placeholder="admin@{{.Domain}}" style="width:100%;"></span>
+          <span class="row-actions">
+            <button type="submit" class="link-action">{{icon "lock" 14}}{{t $.Lang "ssl.issue_button"}}</button>
+          </span>
+        </form>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

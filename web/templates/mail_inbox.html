@@ -1,0 +1,54 @@
+{{define "mail_inbox"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "mail.inbox_title"}} — {{.Mailbox.Address}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <a href="/company/mail" class="back-link">{{t .Lang "mail.back_to_mailboxes"}}</a>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title" style="font-family:var(--font-mono);">{{.Mailbox.Address}}</h1>
+        <p class="page-sub">{{t .Lang "mail.inbox_subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if .LoadError}}<div class="error-banner">{{t .Lang "mail.load_error"}} {{.LoadError}}</div>{{end}}
+
+    {{if not .LoadError}}
+    <div class="panel table-panel">
+      {{if not .Messages}}
+      <div class="empty-inline">{{icon "mail" 26}}<p>{{t .Lang "mail.no_messages"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:2fr 1.4fr 1fr;">
+        <span class="table-head">{{t .Lang "mail.table_subject"}}</span>
+        <span class="table-head">{{t .Lang "mail.table_from"}}</span>
+        <span class="table-head">{{t .Lang "mail.table_date"}}</span>
+      </div>
+      {{range .Messages}}
+      <a href="/company/mail/mailboxes/{{$.Mailbox.ID}}/inbox/{{.UID}}" class="accounts-row" style="grid-template-columns:2fr 1.4fr 1fr;text-decoration:none;">
+        <span style="font-size:13.5px;color:var(--text);">{{if .Subject}}{{.Subject}}{{else}}{{t $.Lang "mail.no_subject"}}{{end}}</span>
+        <span class="cell-muted">{{.From}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Date.Format "Jan 2, 15:04"}}</span>
+      </a>
+      {{end}}
+      {{end}}
+    </div>
+    {{end}}
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,624 @@
+package server
+
+import (
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+
+	"kursor/internal/auth"
+	"kursor/internal/i18n"
+	"kursor/internal/store"
+)
+
+// ticketTopics is the ticket "topic" taxonomy — deliberately the same
+// set as the sidebar menu, so a ticket says which part of the system
+// it's about in terms an operator already knows. LabelKey points at an
+// existing nav.* translation (reused, not duplicated) except for
+// "other".
+var ticketTopics = []struct{ Key, LabelKey string }{
+	{"sites", "nav.sites"},
+	{"files", "nav.files"},
+	{"databases", "nav.databases"},
+	{"ssl", "nav.ssl"},
+	{"cron", "nav.cron"},
+	{"backups", "nav.backups"},
+	{"terminal", "nav.terminal"},
+	{"network_dns", "nav.dns"},
+	{"network_ports", "nav.ports"},
+	{"network_vpn", "nav.vpn"},
+	{"network_ssh", "nav.ssh"},
+	{"accounts", "nav.accounts"},
+	{"departments", "nav.departments"},
+	{"mail", "nav.mail"},
+	{"sso", "nav.sso"},
+	{"other", "servicedesk.topic.other"},
+}
+
+func isValidTopic(topic string) bool {
+	for _, t := range ticketTopics {
+		if t.Key == topic {
+			return true
+		}
+	}
+	return false
+}
+
+// topicLabel translates a topic key — a template func (see templates.go).
+func topicLabel(lang, topic string) string {
+	for _, t := range ticketTopics {
+		if t.Key == topic {
+			return i18n.T(lang, t.LabelKey)
+		}
+	}
+	return topic
+}
+
+// isAgent reports whether sess can see and triage every ticket (any
+// admin, or a member explicitly granted the "servicedesk" permission —
+// see accounts.go's allowedPermissions). Everyone else only ever sees
+// their own tickets — see ticketsFor below.
+func isAgent(sess *store.Session) bool {
+	return sess != nil && sess.HasModule("servicedesk")
+}
+
+func (s *Server) ticketsFor(sess *store.Session) ([]store.Ticket, error) {
+	if isAgent(sess) {
+		return s.store.ListTickets()
+	}
+	return s.store.ListTicketsForRequester(sess.UserID)
+}
+
+// filterTickets applies the list page's search box (matches ticket
+// DisplayID, title, or requester username/name) and topic/status
+// dropdowns — done in Go over the already-scoped list rather than in
+// SQL, which is plenty fast at MVP ticket volumes and keeps the access
+// scoping (ticketsFor) and the filtering (this) as two separate,
+// easy-to-audit steps.
+func filterTickets(tickets []store.Ticket, q, topic, status string) []store.Ticket {
+	q = strings.ToLower(strings.TrimSpace(q))
+	out := make([]store.Ticket, 0, len(tickets))
+	for _, t := range tickets {
+		if q != "" {
+			hay := strings.ToLower(t.DisplayID() + " " + t.Title + " " + t.RequesterName)
+			if !strings.Contains(hay, q) {
+				continue
+			}
+		}
+		if topic != "" && topic != "all" && t.Topic != topic {
+			continue
+		}
+		if status != "" && status != "all" && t.Status != status {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// TicketsData backs the ticket list/queue page.
+type TicketsData struct {
+	PageData
+	IsAgent      bool
+	Tickets      []store.Ticket
+	Topics       []struct{ Key, LabelKey string }
+	AllUsers     []store.User
+	Departments  []store.Department
+	Positions    []store.Position
+	Q            string
+	TopicFilter  string
+	StatusFilter string
+	FormErrorKey string
+}
+
+func (s *Server) handleServiceDeskPage(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	tickets, err := s.ticketsFor(sess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	q := r.URL.Query().Get("q")
+	topicFilter := r.URL.Query().Get("topic")
+	statusFilter := r.URL.Query().Get("status")
+
+	users, _ := s.store.ListUsers()
+	departments, _ := s.store.ListDepartments()
+	positions, _ := s.store.ListPositions()
+
+	s.render(w, "servicedesk", TicketsData{
+		PageData:     s.basePageData(w, r, "company-servicedesk", sess),
+		IsAgent:      isAgent(sess),
+		Tickets:      filterTickets(tickets, q, topicFilter, statusFilter),
+		Topics:       ticketTopics,
+		AllUsers:     users,
+		Departments:  departments,
+		Positions:    positions,
+		Q:            q,
+		TopicFilter:  topicFilter,
+		StatusFilter: statusFilter,
+	})
+}
+
+func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+
+	renderWithError := func(key string) {
+		tickets, _ := s.ticketsFor(sess)
+		users, _ := s.store.ListUsers()
+		departments, _ := s.store.ListDepartments()
+		positions, _ := s.store.ListPositions()
+		s.render(w, "servicedesk", TicketsData{
+			PageData:     s.basePageData(w, r, "company-servicedesk", sess),
+			IsAgent:      isAgent(sess),
+			Tickets:      tickets,
+			Topics:       ticketTopics,
+			AllUsers:     users,
+			Departments:  departments,
+			Positions:    positions,
+			FormErrorKey: key,
+		})
+	}
+
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		renderWithError("login.error.csrf")
+		return
+	}
+
+	title := r.FormValue("title")
+	if title == "" {
+		renderWithError("servicedesk.error.title_required")
+		return
+	}
+	ticketType := r.FormValue("type")
+	if ticketType != "incident" && ticketType != "request" && ticketType != "problem" {
+		ticketType = "incident"
+	}
+	priority := r.FormValue("priority")
+	switch priority {
+	case "low", "medium", "high", "critical":
+	default:
+		priority = "medium"
+	}
+	topic := r.FormValue("topic")
+	if !isValidTopic(topic) {
+		topic = "other"
+	}
+
+	nt := store.NewTicket{
+		Title:       title,
+		Description: r.FormValue("description"),
+		Type:        ticketType,
+		Topic:       topic,
+		Reason:      r.FormValue("reason"),
+		Priority:    priority,
+		RequesterID: sess.UserID,
+	}
+
+	switch r.FormValue("request_kind") {
+	case "grant_access":
+		nt.RequestKind = "grant_access"
+		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
+			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
+				nt.TargetUserID = &user.ID
+			}
+		}
+		nt.RequestedPermissions = parsePermissions(r.Form["requested_permissions"])
+	case "terminate":
+		nt.RequestKind = "terminate"
+		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
+			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
+				nt.TargetUserID = &user.ID
+			}
+		}
+	case "new_account":
+		nt.RequestKind = "new_account"
+		nt.NewLastName = r.FormValue("new_last_name")
+		nt.NewFirstName = r.FormValue("new_first_name")
+		nt.NewPatronymic = r.FormValue("new_patronymic")
+		nt.NewEmail = r.FormValue("new_email")
+		nt.NewPhone = r.FormValue("new_phone")
+		nt.NewHiredAt = r.FormValue("new_hired_at")
+		nt.NewDepartmentID = parseOptionalID(r.FormValue("new_department_id"))
+		nt.NewPositionID = parseOptionalID(r.FormValue("new_position_id"))
+	}
+
+	id, err := s.store.CreateTicket(nt)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+}
+
+// TicketData backs the ticket detail page.
+type TicketData struct {
+	PageData
+	IsAgent      bool
+	Ticket       store.Ticket
+	Comments     []store.TicketComment
+	AllUsers     []store.User
+	NewUsername  string
+	NewPassword  string
+	FormErrorKey string
+}
+
+// loadTicket fetches a ticket and enforces access: agents see
+// everything, everyone else only their own.
+func (s *Server) loadTicket(r *http.Request, sess *store.Session) (*store.Ticket, error) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		return nil, nil
+	}
+	t, err := s.store.GetTicket(id)
+	if err != nil || t == nil {
+		return nil, err
+	}
+	if !isAgent(sess) && t.RequesterID != sess.UserID {
+		return nil, nil
+	}
+	return t, nil
+}
+
+func (s *Server) handleTicketPage(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if ticket == nil {
+		http.NotFound(w, r)
+		return
+	}
+	comments, _ := s.store.ListTicketComments(ticket.ID)
+
+	data := TicketData{
+		PageData: s.basePageData(w, r, "company-servicedesk", sess),
+		IsAgent:  isAgent(sess),
+		Ticket:   *ticket,
+		Comments: comments,
+	}
+	if data.IsAgent {
+		data.AllUsers, _ = s.store.ListUsers()
+	}
+	s.render(w, "ticket", data)
+}
+
+func (s *Server) handleTicketStatus(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+	status := r.FormValue("status")
+	switch status {
+	case "new", "in_progress", "resolved", "closed":
+		_ = s.store.UpdateTicketStatus(ticket.ID, status)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+func (s *Server) handleTicketAssignToMe(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+	if ticket.AssigneeID != nil && *ticket.AssigneeID == sess.UserID {
+		_ = s.store.AssignTicket(ticket.ID, nil) // click again to unassign yourself
+	} else {
+		id := sess.UserID
+		_ = s.store.AssignTicket(ticket.ID, &id)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+// handleTicketAssign is the search-picker assignment path: an agent
+// types/picks any user (not just themselves) via the username-backed
+// <datalist> in ticket.html. The same "search a user, assign
+// something to them" pattern is meant to be reused for other
+// per-user resources later (e.g. VPN peers, once that module exists).
+func (s *Server) handleTicketAssign(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+	username := strings.TrimSpace(r.FormValue("username"))
+	if username == "" {
+		_ = s.store.AssignTicket(ticket.ID, nil)
+	} else if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
+		_ = s.store.AssignTicket(ticket.ID, &user.ID)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+func (s *Server) handleTicketComment(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if ticket == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+	body := r.FormValue("body")
+	if body != "" {
+		_ = s.store.AddTicketComment(ticket.ID, sess.UserID, body)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+// ---------- approvals ----------
+
+// ApprovalsData backs the approvals queue page.
+type ApprovalsData struct {
+	PageData
+	Tickets []store.Ticket
+}
+
+func (s *Server) handleApprovalsPage(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	tickets, _ := s.store.ListPendingApprovals()
+	s.render(w, "approvals", ApprovalsData{
+		PageData: s.basePageData(w, r, "company-approvals", sess),
+		Tickets:  tickets,
+	})
+}
+
+// handleTicketApproval is the sign-off decision — deliberately
+// admin-only (not just "servicedesk" agents): approving a request that
+// can end in a real account being created is a governance action, not
+// routine triage.
+func (s *Server) handleTicketApproval(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+		return
+	}
+	decision := r.FormValue("decision")
+	if decision == "approved" || decision == "rejected" {
+		_ = s.store.SetTicketApproval(id, decision, sess.UserID)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+}
+
+// handleTicketCreateAccount is the "one button" from the request
+// user's original ask: turn a ticket's new-employee questionnaire into
+// a real Kursor account, reusing the exact same creation logic
+// accounts.go's form uses (temp password, bcrypt hash, everything) —
+// only gated by approval when the ticket required it.
+func (s *Server) handleTicketCreateAccount(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+
+	redirectBack := func() {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+	}
+
+	if ticket.RequestKind != "new_account" || ticket.CreatedAccountID != nil {
+		redirectBack()
+		return
+	}
+	if ticket.RequiresApproval && ticket.ApprovalStatus != "approved" {
+		redirectBack()
+		return
+	}
+
+	username := auth.SuggestUsername(ticket.NewFirstName, ticket.NewLastName)
+	if username == "" {
+		username = "user"
+	}
+	// A ticket-generated username has no human watching the field to
+	// notice a collision the way the accounts.html form does — resolve
+	// it here instead, trying username2, username3, ... until one's free.
+	finalUsername := username
+	for i := 2; i < 50; i++ {
+		existing, err := s.store.GetUserByUsername(finalUsername)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		if existing == nil {
+			break
+		}
+		finalUsername = username + strconv.Itoa(i)
+	}
+
+	tempPassword, err := auth.GenerateTempPassword()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	hash, err := auth.HashPassword(tempPassword)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	newID, err := s.store.CreateUser(store.NewUser{
+		Username:     finalUsername,
+		PasswordHash: hash,
+		Email:        ticket.NewEmail,
+		Role:         "member",
+		LastName:     ticket.NewLastName,
+		FirstName:    ticket.NewFirstName,
+		Patronymic:   ticket.NewPatronymic,
+		Phone:        ticket.NewPhone,
+		DepartmentID: ticket.NewDepartmentID,
+		PositionID:   ticket.NewPositionID,
+		HiredAt:      ticket.NewHiredAt,
+	})
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	_ = s.store.SetTicketCreatedAccount(ticket.ID, newID)
+	_ = s.store.UpdateTicketStatus(ticket.ID, "resolved")
+
+	comments, _ := s.store.ListTicketComments(ticket.ID)
+	updated, _ := s.store.GetTicket(ticket.ID)
+	users, _ := s.store.ListUsers()
+	data := TicketData{
+		PageData:    s.basePageData(w, r, "company-servicedesk", sess),
+		IsAgent:     true,
+		Ticket:      *updated,
+		Comments:    comments,
+		AllUsers:    users,
+		NewUsername: finalUsername,
+		NewPassword: tempPassword,
+	}
+	s.render(w, "ticket", data)
+}
+
+// mergePermissions unions two comma-separated permission lists into one,
+// deduplicated and restricted to the allowedPermissions whitelist — the
+// same defense-in-depth the checkbox form already applies at submit
+// time, re-applied here since these values may have been sitting in a
+// ticket for days before an agent acts on them.
+func mergePermissions(existing, add []string) string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range append(append([]string{}, existing...), add...) {
+		if !allowedPermissions[p] || seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	return strings.Join(out, ",")
+}
+
+// handleTicketGrantAccess is the one-click fulfillment for a
+// "grant_access" request: unions the checkboxes the requester picked
+// into the target user's existing permissions. Guarded the same way as
+// account creation — right request kind, approved if approval was
+// required, and only once (ActionApplied).
+func (s *Server) handleTicketGrantAccess(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+
+	redirectBack := func() {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+	}
+
+	if ticket.RequestKind != "grant_access" || ticket.TargetUserID == nil || ticket.ActionApplied {
+		redirectBack()
+		return
+	}
+	if ticket.RequiresApproval && ticket.ApprovalStatus != "approved" {
+		redirectBack()
+		return
+	}
+
+	target, err := s.store.GetUserByID(*ticket.TargetUserID)
+	if err != nil || target == nil {
+		redirectBack()
+		return
+	}
+
+	merged := mergePermissions(target.PermissionsList(), ticket.RequestedPermissionsList())
+	if err := s.store.SetUserPermissions(target.ID, merged); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	_ = s.store.SetTicketActionApplied(ticket.ID)
+	_ = s.store.UpdateTicketStatus(ticket.ID, "resolved")
+	redirectBack()
+}
+
+// handleTicketTerminateTarget is the one-click fulfillment for a
+// "terminate" (offboarding) request: reuses the exact same
+// Store.Terminate the Accounts page's "Звільнити" button calls, which
+// records today as the last day and disables the account — disabling
+// revokes every module permission and VPN/SSH/etc. access at once,
+// since a disabled account fails GetSession on its very next request.
+// Guarded by canDeactivate the same way the Accounts page action is:
+// never terminate yourself, never terminate the last active admin.
+func (s *Server) handleTicketTerminateTarget(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+
+	redirectBack := func() {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+	}
+
+	if ticket.RequestKind != "terminate" || ticket.TargetUserID == nil || ticket.ActionApplied {
+		redirectBack()
+		return
+	}
+	if ticket.RequiresApproval && ticket.ApprovalStatus != "approved" {
+		redirectBack()
+		return
+	}
+
+	target, err := s.store.GetUserByID(*ticket.TargetUserID)
+	if err != nil || target == nil || !s.canDeactivate(sess, target) {
+		redirectBack()
+		return
+	}
+
+	if err := s.store.Terminate(target.ID, time.Now().Format("2006-01-02")); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	_ = s.store.SetTicketActionApplied(ticket.ID)
+	_ = s.store.UpdateTicketStatus(ticket.ID, "resolved")
+	redirectBack()
+}

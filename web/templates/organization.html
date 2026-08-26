@@ -1,0 +1,88 @@
+{{define "organization"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "org.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "org.title"}}</h1>
+      </div>
+    </div>
+
+    <div class="content-grid">
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "org.departments_title"}}</span></div>
+
+        <form method="post" action="/departments" class="inline-add-form">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <input class="input input-plain" type="text" name="name" placeholder="{{t .Lang "org.department_name"}}" required style="flex:1;">
+          <select class="input input-plain" name="parent_id" style="width:180px;">
+            <option value="">{{t .Lang "org.parent_department"}}</option>
+            {{range .Departments}}{{if not .ParentID}}<option value="{{.ID}}">{{.Name}}</option>{{end}}{{end}}
+          </select>
+          <button type="submit" class="btn btn-primary">{{icon "plus" 14}}{{t .Lang "org.add"}}</button>
+        </form>
+
+        {{if not .Departments}}
+        <div class="empty-inline">{{icon "building" 24}}<p>{{t .Lang "org.empty_departments"}}</p></div>
+        {{else}}
+        <div class="org-list">
+          {{$names := .DeptNames}}
+          {{range .Departments}}
+          <div class="org-row">
+            <span>{{.Path $names}}</span>
+            <form method="post" action="/departments/{{.ID}}/delete">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+            </form>
+          </div>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "org.positions_title"}}</span></div>
+
+        <form method="post" action="/positions" class="inline-add-form">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <input class="input input-plain" type="text" name="name" placeholder="{{t .Lang "org.position_name"}}" required style="flex:1;">
+          <button type="submit" class="btn btn-primary">{{icon "plus" 14}}{{t .Lang "org.add"}}</button>
+        </form>
+
+        {{if not .Positions}}
+        <div class="empty-inline">{{icon "users" 24}}<p>{{t .Lang "org.empty_positions"}}</p></div>
+        {{else}}
+        <div class="org-list">
+          {{range .Positions}}
+          <div class="org-row">
+            <span>{{.Name}}</span>
+            <form method="post" action="/positions/{{.ID}}/delete">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+            </form>
+          </div>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

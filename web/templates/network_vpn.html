@@ -1,0 +1,121 @@
+{{define "network_vpn"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.vpn"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.vpn"}}</h1>
+        <p class="page-sub">{{t .Lang "vpn.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .Installed}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "vpn.not_detected"}}</span>
+        <form method="post" action="/network/vpn/install" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "vpn.install_button"}}</button>
+        </form>
+      </div>
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    {{if .NewPeerConfig}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "vpn.config_ready_title"}} — {{.NewPeerName}}</div>
+      <textarea readonly class="input input-plain" style="width:100%;min-height:170px;font-family:var(--font-mono);font-size:12.5px;margin-top:8px;" onclick="this.select()">{{.NewPeerConfig}}</textarea>
+      <div class="created-banner-hint">{{t .Lang "vpn.config_ready_hint"}}</div>
+    </div>
+    {{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "vpn.settings_title"}}</span></div>
+      <form method="post" action="/network/vpn/settings" class="form-grid" style="grid-template-columns:2fr 1fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "vpn.form_endpoint"}}</label>
+          <input class="input input-plain" type="text" name="endpoint" value="{{.Settings.Endpoint}}" placeholder="vpn.example.com">
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "vpn.form_port"}}</label>
+          <input class="input input-plain" type="number" name="port" value="{{.Settings.Port}}" min="1" max="65535">
+        </div>
+        <button type="submit" class="btn">{{t .Lang "vpn.settings_save"}}</button>
+      </form>
+      <div class="info-chips" style="margin-top:14px;">
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "vpn.server_public_key"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{.ServerPublicKey}}</span></div>
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "vpn.server_subnet"}}</span><span class="info-chip-value">{{.Settings.ServerAddress}}</span></div>
+      </div>
+    </div>
+
+    <details class="add-account" style="margin-bottom:16px;">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "vpn.add_peer_button"}}</summary>
+      <form class="add-account-form" method="post" action="/network/vpn/peers">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid" style="grid-template-columns:1.4fr 1fr auto;align-items:end;">
+          <div>
+            <label class="field-label">{{t .Lang "vpn.form_peer_name"}}</label>
+            <input class="input input-plain" type="text" name="name" required>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "vpn.form_target_user"}}</label>
+            <input class="input input-plain" type="text" name="target_username" list="vpn-all-users" placeholder="{{t .Lang "ticket.assign_search_placeholder"}}">
+            <datalist id="vpn-all-users">
+              {{range .AllUsers}}<option value="{{.Username}}">{{.DisplayName}}</option>{{end}}
+            </datalist>
+          </div>
+          <button type="submit" class="btn btn-primary">{{t .Lang "vpn.create_button"}}</button>
+        </div>
+      </form>
+    </details>
+
+    <div class="panel table-panel">
+      {{if not .Peers}}
+      <div class="empty-inline">{{icon "shield" 26}}<p>{{t .Lang "vpn.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.4fr 1.2fr 1fr 0.8fr 1fr;">
+        <span class="table-head">{{t .Lang "vpn.table_name"}}</span>
+        <span class="table-head">{{t .Lang "vpn.table_user"}}</span>
+        <span class="table-head">{{t .Lang "vpn.table_ip"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
+        <span></span>
+      </div>
+      {{range .Peers}}
+      <div class="accounts-row" style="grid-template-columns:1.4fr 1.2fr 1fr 0.8fr 1fr;{{if not .Enabled}}opacity:0.55;{{end}}">
+        <span style="font-size:13.5px;color:var(--text);">{{.Name}}</span>
+        <span class="cell-muted">{{if .UserName}}{{.UserName}}{{else}}—{{end}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.AllowedIP}}</span>
+        <span class="status-badge status-{{if .Enabled}}active{{else}}disabled{{end}}">{{if .Enabled}}{{t $.Lang "accounts.status.active"}}{{else}}{{t $.Lang "accounts.status.disabled"}}{{end}}</span>
+        <span class="row-actions">
+          <form method="post" action="/network/vpn/peers/{{.ID}}/toggle">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{if .Enabled}}{{t $.Lang "accounts.action.disable"}}{{else}}{{t $.Lang "accounts.action.enable"}}{{end}}</button>
+          </form>
+          <form method="post" action="/network/vpn/peers/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

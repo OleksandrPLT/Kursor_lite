@@ -1,0 +1,95 @@
+{{define "profile"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Account.DisplayName}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <a href="/accounts" class="back-link">{{t .Lang "accounts.profile.back"}}</a>
+
+    <div class="profile-header">
+      {{if .Account.HasAvatar}}<img class="avatar-photo avatar-photo-lg" src="/accounts/{{.Account.ID}}/avatar" alt="">{{else}}<div class="avatar avatar-lg">{{initials .Account.DisplayName}}</div>{{end}}
+      <div style="flex:1;">
+        <h1 class="page-title" style="margin-bottom:6px;">{{.Account.DisplayName}}</h1>
+        <p class="page-sub">@{{.Account.Username}}{{if .Account.PositionName}} · {{.Account.PositionName}}{{else if .Account.JobTitle}} · {{.Account.JobTitle}}{{end}}{{if .Account.DepartmentName}} · {{.Account.DepartmentName}}{{end}}</p>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <span class="role-badge role-{{.Account.Role}}">{{if eq .Account.Role "admin"}}{{t .Lang "accounts.role.admin"}}{{else}}{{t .Lang "accounts.role.member"}}{{end}}</span>
+          <span class="status-badge status-{{.Account.Status}}">{{if eq .Account.Status "active"}}{{t .Lang "accounts.status.active"}}{{else}}{{t .Lang "accounts.status.disabled"}}{{end}}</span>
+        </div>
+      </div>
+      <a href="/accounts/{{.Account.ID}}/edit" class="btn btn-primary">{{icon "gear" 15}}{{t .Lang "accounts.action.edit"}}</a>
+    </div>
+
+    <div class="content-grid">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "accounts.profile.contact"}}</span></div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_email"}}</span>
+          <span class="profile-field-value">{{if .Account.Email}}{{.Account.Email}}{{else}}—{{end}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_phone"}}</span>
+          <span class="profile-field-value">{{if .Account.Phone}}{{.Account.Phone}}{{else}}—{{end}}</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "accounts.profile.employment"}}</span></div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_job_title"}}</span>
+          <span class="profile-field-value">{{if .Account.JobTitle}}{{.Account.JobTitle}}{{else}}—{{end}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_hired_at"}}</span>
+          <span class="profile-field-value">{{if .Account.HiredAt}}{{.Account.HiredAt}}{{else}}{{t .Lang "accounts.profile.no_hired_date"}}{{end}}</span>
+        </div>
+        {{if .Account.TerminatedAt}}
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.terminated_on"}}</span>
+          <span class="profile-field-value">{{.Account.TerminatedAt}}</span>
+        </div>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "accounts.profile.access"}}</span></div>
+      {{if eq .Account.Role "admin"}}
+      <div class="access-badges">
+        <span class="access-badge">{{icon "globe" 14}}{{t .Lang "accounts.permission.sites"}}</span>
+        <span class="access-badge">{{icon "folder" 14}}{{t .Lang "accounts.permission.files"}}</span>
+        <span class="access-badge">{{icon "database" 14}}{{t .Lang "accounts.permission.databases"}}</span>
+        <span class="access-badge">{{icon "shield" 14}}{{t .Lang "accounts.permission.network"}}</span>
+        <span class="access-badge">{{icon "terminal" 14}}{{t .Lang "accounts.permission.server"}}</span>
+        <span class="access-badge">{{icon "lifebuoy" 14}}{{t .Lang "accounts.permission.servicedesk"}}</span>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:12px;">{{t .Lang "accounts.profile.access_admin_note"}}</p>
+      {{else if .Account.PermissionsList}}
+      <div class="access-badges">
+        {{if .Account.HasModule "sites"}}<span class="access-badge">{{icon "globe" 14}}{{t .Lang "accounts.permission.sites"}}</span>{{end}}
+        {{if .Account.HasModule "files"}}<span class="access-badge">{{icon "folder" 14}}{{t .Lang "accounts.permission.files"}}</span>{{end}}
+        {{if .Account.HasModule "databases"}}<span class="access-badge">{{icon "database" 14}}{{t .Lang "accounts.permission.databases"}}</span>{{end}}
+        {{if .Account.HasModule "network"}}<span class="access-badge">{{icon "shield" 14}}{{t .Lang "accounts.permission.network"}}</span>{{end}}
+        {{if .Account.HasModule "server"}}<span class="access-badge">{{icon "terminal" 14}}{{t .Lang "accounts.permission.server"}}</span>{{end}}
+        {{if .Account.HasModule "servicedesk"}}<span class="access-badge">{{icon "lifebuoy" 14}}{{t .Lang "accounts.permission.servicedesk"}}</span>{{end}}
+      </div>
+      {{else}}
+      <p style="font-size:12.5px; color:var(--muted);">{{t .Lang "accounts.profile.no_access"}}</p>
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

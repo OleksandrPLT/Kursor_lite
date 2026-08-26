@@ -1,0 +1,89 @@
+{{define "sites"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.sites"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.sites"}}</h1>
+        <p class="page-sub">{{t .Lang "sites.subtitle"}}</p>
+      </div>
+      {{if .NginxStatus.Ready}}
+      <button form="new-site-form" type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "sites.add_button"}}</button>
+      {{end}}
+    </div>
+
+    {{if not .NginxStatus.Ready}}
+      <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <span>{{t .Lang "sites.not_detected"}}</span>
+        <form method="post" action="/sites/install-nginx" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "sites.install_button"}}</button>
+        </form>
+      </div>
+    {{end}}
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+    {{if .Warning}}<div class="error-banner" style="background:rgba(255,138,61,0.10);border-color:rgba(255,138,61,0.35);color:#ffb37a;">{{t .Lang "sites.warning_prefix"}} {{.Warning}}</div>{{end}}
+
+    {{if .NginxStatus.Ready}}
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <form id="new-site-form" method="post" action="/sites" style="display:flex;gap:10px;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div style="flex:1;">
+          <label class="field-label">{{t .Lang "sites.form_domain"}}</label>
+          <input class="input input-plain" type="text" name="domain" placeholder="example.com" required>
+        </div>
+      </form>
+    </div>
+    {{end}}
+
+    <div class="panel table-panel">
+      {{if not .Sites}}
+      <div class="empty-inline">{{icon "globe" 26}}<p>{{t .Lang "dashboard.sites_empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.6fr 2fr 1fr 1fr 1.2fr;">
+        <span class="table-head">{{t .Lang "sites.table_domain"}}</span>
+        <span class="table-head">{{t .Lang "sites.table_docroot"}}</span>
+        <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
+        <span class="table-head">{{t .Lang "sites.table_created"}}</span>
+        <span></span>
+      </div>
+      {{range .Sites}}
+      <div class="accounts-row" style="grid-template-columns:1.6fr 2fr 1fr 1fr 1.2fr;">
+        <span style="font-family:var(--font-mono);font-size:13.5px;color:var(--text);">{{.Domain}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Docroot}}</span>
+        <span class="status-badge status-{{if eq .Status "enabled"}}active{{else}}disabled{{end}}">{{if eq .Status "enabled"}}{{t $.Lang "accounts.status.active"}}{{else}}{{t $.Lang "accounts.status.disabled"}}{{end}}</span>
+        <span class="cell-muted">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+        <span class="row-actions">
+          <form method="post" action="/sites/{{.ID}}/status">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{if eq .Status "enabled"}}{{t $.Lang "accounts.action.disable"}}{{else}}{{t $.Lang "accounts.action.enable"}}{{end}}</button>
+          </form>
+          <form method="post" action="/sites/{{.ID}}/delete" onsubmit="return confirm('{{t $.Lang "files.confirm_delete"}}');">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

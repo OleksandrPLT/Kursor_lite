@@ -1,0 +1,62 @@
+{{define "approvals"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "approvals.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "approvals.title"}}</h1>
+        <p class="page-sub">{{t .Lang "approvals.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Tickets}}
+      <div class="empty-inline">{{icon "check" 26}}<p>{{t .Lang "approvals.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:0.8fr 1.8fr 1.4fr 1fr 1.2fr;">
+        <span class="table-head">{{t .Lang "servicedesk.table_id"}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_title"}}</span>
+        <span class="table-head">{{t .Lang "approvals.table_kind"}}</span>
+        <span class="table-head">{{t .Lang "servicedesk.table_requester"}}</span>
+        <span></span>
+      </div>
+      {{$lang := .Lang}}
+      {{range .Tickets}}
+      <div class="accounts-row" style="grid-template-columns:0.8fr 1.8fr 1.4fr 1fr 1.2fr;">
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.DisplayID}}</span>
+        <a href="/company/servicedesk/{{.ID}}" style="font-size:13.5px;color:var(--text);">{{.Title}}</a>
+        <span class="cell-muted">{{if eq .RequestKind "new_account"}}{{t $lang "servicedesk.request_kind.new_account"}}{{else if eq .RequestKind "terminate"}}{{t $lang "servicedesk.request_kind.terminate"}}{{else}}{{t $lang "servicedesk.request_kind.grant_access"}}{{end}}</span>
+        <span class="cell-muted">{{.RequesterName}}</span>
+        <span class="row-actions">
+          <form method="post" action="/company/servicedesk/{{.ID}}/approval">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" name="decision" value="rejected" class="link-action link-danger">{{t $lang "ticket.reject"}}</button>
+          </form>
+          <form method="post" action="/company/servicedesk/{{.ID}}/approval">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" name="decision" value="approved" class="link-action">{{t $lang "ticket.approve"}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,74 @@
+{{define "login"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Kursor by Intech</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="lang-switch lang-switch-floating">
+    <a href="/lang/uk" class="lang-flag{{if eq .Lang "uk"}} active{{end}}" title="Українська">🇺🇦</a>
+    <a href="/lang/en" class="lang-flag{{if eq .Lang "en"}} active{{end}}" title="English">🇬🇧</a>
+  </div>
+
+  <div class="login-brand">
+    <div class="login-brand-top">
+      <div class="brand-mark" style="width:34px;height:34px;">
+        <svg width="15" height="21" viewBox="0 0 14 20">
+          <rect class="bar-yellow" x="4" y="0" width="6" height="14" rx="3"/>
+          <rect class="bar-blue" x="4" y="16" width="6" height="4" rx="2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name" style="font-size:18px;">Kursor</div>
+        <div class="brand-sub">by Intech</div>
+      </div>
+    </div>
+
+    <div>
+      <h1 class="login-headline">{{t .Lang "login.headline"}}</h1>
+      <p class="login-sub">{{t .Lang "login.sub"}}</p>
+      <div class="login-features">
+        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature1"}}</div>
+        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature2"}}</div>
+        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature3"}}</div>
+      </div>
+    </div>
+
+    <span class="login-footer">KURSOR BY INTECH · V0.1.0</span>
+  </div>
+
+  <div class="login-form-wrap">
+    <form class="login-form" method="post" action="/login">
+      <h2>{{t .Lang "login.welcome"}}</h2>
+      <p class="login-target">{{t .Lang "login.target"}}</p>
+
+      {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}</div>{{end}}
+
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <label class="field-label">{{t .Lang "login.username"}}</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{icon "user" 15}}</span>
+        <input class="input" type="text" name="username" autocomplete="username" required autofocus>
+      </div>
+
+      <label class="field-label">{{t .Lang "login.password"}}</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{icon "lock" 15}}</span>
+        <input class="input" type="password" name="password" autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">{{t .Lang "login.submit"}}</button>
+      <p class="form-hint">{{t .Lang "login.forgot"}}</p>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

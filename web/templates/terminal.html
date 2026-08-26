@@ -1,0 +1,44 @@
+{{define "terminal"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.terminal"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+<link rel="stylesheet" href="/static/vendor/xterm/xterm.css">
+<style>
+  #terminal { height: 100%; padding: 12px; box-sizing: border-box; }
+  .xterm { height: 100%; }
+</style>
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main" style="display:flex;flex-direction:column;height:100vh;box-sizing:border-box;">
+    {{template "topbar" .}}
+
+    <div class="page-header" style="margin-bottom:14px;">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.terminal"}}</h1>
+        <p class="page-sub">{{t .Lang "terminal.subtitle"}}</p>
+      </div>
+      <span id="terminal-status" style="font-family:var(--font-mono);font-size:16px;color:var(--muted);" title="{{t .Lang "terminal.connecting"}}">○</span>
+    </div>
+
+    <div class="error-banner" style="background:rgba(255,138,61,0.10);border-color:rgba(255,138,61,0.35);color:#ffb37a;">{{t .Lang "terminal.security_note"}}</div>
+
+    <div class="panel" style="flex:1;padding:0;overflow:hidden;background:#161b26;">
+      <div id="terminal"></div>
+    </div>
+
+  </div>
+</div>
+<script src="/static/vendor/xterm/xterm.js"></script>
+<script src="/static/vendor/xterm/addon-fit.js"></script>
+<script src="/static/js/terminal.js"></script>
+</body>
+</html>
+{{end}}

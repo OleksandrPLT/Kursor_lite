@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      --bg: oklch(0.15 0.012 250);
+      --panel: oklch(0.195 0.013 250);
+      --panel-2: oklch(0.24 0.014 250);
+      --border: oklch(0.32 0.014 250 / 0.65);
+      --text: oklch(0.94 0.01 250);
+      --muted: oklch(0.60 0.02 250);
+      --accent: oklch(0.75 0.14 195);
+      --accent-2: oklch(0.72 0.15 165);
+      --accent-dim: oklch(0.30 0.06 195 / 0.5);
+      --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --good: oklch(0.72 0.15 150);
+      --warn: oklch(0.78 0.15 80);
+      --bad: oklch(0.66 0.18 25);
+      --shadow: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 16px 32px -14px oklch(0 0 0 / 0.55);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: oklch(0.82 0.14 195); }
+  </style>
+</helmet>
+<div style="width:240px; height:900px; background:var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; box-sizing:border-box;">
+
+  <div style="padding:26px 20px 22px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border);">
+    <svg width="30" height="30" viewBox="0 0 24 24"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="7" fill="url(#lg1)"/><rect x="7" y="6" width="3" height="12" rx="1.2" fill="oklch(0.15 0.012 250)"/></svg>
+    <div style="display:flex; flex-direction:column; line-height:1.15;">
+      <span style="font-weight:700; font-size:16px; color:var(--text); letter-spacing:-0.01em;">Kursor</span>
+      <span style="font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase;">by Intech</span>
+    </div>
+  </div>
+
+  <div style="padding:18px 20px 6px;">
+    <span style="font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:oklch(0.46 0.015 250);">Menu</span>
+  </div>
+
+  <nav style="padding:6px 12px 0; display:flex; flex-direction:column; gap:3px;">
+
+    <a href="#" style="{{dashboardStyle}}; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-family:var(--mono); font-size:13px; font-weight:500;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Dashboard
+    </a>
+
+    <a href="#" style="{{sitesStyle}}; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-family:var(--mono); font-size:13px; font-weight:500;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+      Sites
+    </a>
+
+    <a href="#" style="{{filesStyle}}; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-family:var(--mono); font-size:13px; font-weight:500;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+      File Manager
+    </a>
+
+    <a href="#" style="{{databasesStyle}}; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-family:var(--mono); font-size:13px; font-weight:500;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>
+      Databases
+    </a>
+
+  </nav>
+
+  <div style="margin-top:auto; padding:16px 12px; display:flex; flex-direction:column; gap:4px; border-top:1px solid var(--border);">
+
+    <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; margin-bottom:8px; background:var(--panel-2); border-radius:12px; box-shadow:var(--shadow);">
+      <span style="width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px oklch(0.72 0.15 150 / 0.18); flex-shrink:0;"></span>
+      <div style="display:flex; flex-direction:column; line-height:1.3; overflow:hidden;">
+        <span style="font-family:var(--mono); font-size:12px; color:var(--text);">prod-01</span>
+        <span style="font-family:var(--mono); font-size:10px; color:var(--muted);">192.168.1.42 · 14d 6h</span>
+      </div>
+    </div>
+
+    <a href="#" style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; color:var(--muted); font-family:var(--mono); font-size:13px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+      Settings
+    </a>
+    <a href="#" style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; color:var(--muted); font-family:var(--mono); font-size:13px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Log out
+    </a>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"active":{"editor":"enum","default":"dashboard","options":["dashboard","sites","files","databases"]},"$preview":{"width":240,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'dashboard';
+    const on = 'background:linear-gradient(135deg, var(--accent-dim), oklch(0.30 0.06 165 / 0.4)); color:var(--accent);';
+    const off = 'color:var(--muted);';
+    return {
+      dashboardStyle: active === 'dashboard' ? on : off,
+      sitesStyle: active === 'sites' ? on : off,
+      filesStyle: active === 'files' ? on : off,
+      databasesStyle: active === 'databases' ? on : off,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{{define "sidebar"}}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">
+      <svg width="14" height="20" viewBox="0 0 14 20">
+        <rect class="bar-yellow" x="4" y="0" width="6" height="14" rx="3"/>
+        <rect class="bar-blue" x="4" y="16" width="6" height="4" rx="2"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Kursor</div>
+      <div class="brand-sub">by Intech</div>
+    </div>
+  </div>
+
+  <div class="nav-scroll">
+  <nav class="nav">
+    <a href="/" class="nav-item{{if eq .Active "dashboard"}} active{{end}}">{{icon "grid" 18}}{{t .Lang "nav.dashboard"}}</a>
+  </nav>
+
+  {{if or .CanSites .CanFiles .CanDatabases .CanServer}}
+  <div class="sidebar-section">{{t .Lang "nav.group.server"}}</div>
+  <nav class="nav">
+    {{if .CanSites}}<a href="/sites" class="nav-item{{if eq .Active "sites"}} active{{end}}">{{icon "globe" 18}}{{t .Lang "nav.sites"}}</a>{{end}}
+    {{if .CanFiles}}<a href="/files" class="nav-item{{if eq .Active "files"}} active{{end}}">{{icon "folder" 18}}{{t .Lang "nav.files"}}</a>{{end}}
+    {{if .CanDatabases}}<a href="/databases" class="nav-item{{if eq .Active "databases"}} active{{end}}">{{icon "database" 18}}{{t .Lang "nav.databases"}}</a>{{end}}
+    {{if .CanSites}}<a href="/server/ssl" class="nav-item{{if eq .Active "server-ssl"}} active{{end}}">{{icon "lock" 18}}{{t .Lang "nav.ssl"}}</a>{{end}}
+    {{if .CanServer}}<a href="/server/cron" class="nav-item{{if eq .Active "server-cron"}} active{{end}}">{{icon "clock" 18}}{{t .Lang "nav.cron"}}</a>{{end}}
+    {{if .CanServer}}<a href="/server/backups" class="nav-item{{if eq .Active "server-backups"}} active{{end}}">{{icon "archive" 18}}{{t .Lang "nav.backups"}}</a>{{end}}
+    {{if .CanServer}}<a href="/server/terminal" class="nav-item{{if eq .Active "server-terminal"}} active{{end}}">{{icon "terminal" 18}}{{t .Lang "nav.terminal"}}</a>{{end}}
+    {{if .CanServer}}<a href="/server/software" class="nav-item{{if eq .Active "server-software"}} active{{end}}">{{icon "download" 18}}{{t .Lang "nav.software"}}</a>{{end}}
+  </nav>
+  {{end}}
+
+  {{if .CanNetwork}}
+  <div class="sidebar-section">{{t .Lang "nav.group.network"}}</div>
+  <nav class="nav">
+    <a href="/network/domains" class="nav-item{{if eq .Active "network-domains"}} active{{end}}">{{icon "globe" 18}}{{t .Lang "nav.domains"}}</a>
+    <a href="/network/dns" class="nav-item{{if eq .Active "network-dns"}} active{{end}}">{{icon "tag" 18}}{{t .Lang "nav.dns"}}</a>
+    <a href="/network/ports" class="nav-item{{if eq .Active "network-ports"}} active{{end}}">{{icon "toggles" 18}}{{t .Lang "nav.ports"}}</a>
+    <a href="/network/vpn" class="nav-item{{if eq .Active "network-vpn"}} active{{end}}">{{icon "shield" 18}}{{t .Lang "nav.vpn"}}</a>
+    <a href="/network/ssh" class="nav-item{{if eq .Active "network-ssh"}} active{{end}}">{{icon "key" 18}}{{t .Lang "nav.ssh"}}</a>
+  </nav>
+  {{end}}
+
+  <div class="sidebar-section">{{t .Lang "nav.group.company"}}</div>
+  <nav class="nav">
+    {{if .IsAdmin}}<a href="/accounts" class="nav-item{{if eq .Active "accounts"}} active{{end}}">{{icon "users" 18}}{{t .Lang "nav.accounts"}}</a>{{end}}
+    {{if .IsAdmin}}<a href="/departments" class="nav-item{{if eq .Active "departments"}} active{{end}}">{{icon "building" 18}}{{t .Lang "nav.departments"}}</a>{{end}}
+    {{if .IsAdmin}}<a href="/company/mail" class="nav-item{{if eq .Active "company-mail"}} active{{end}}">{{icon "mail" 18}}{{t .Lang "nav.mail"}}</a>{{end}}
+    {{if .IsAdmin}}<a href="/company/sso" class="nav-item{{if eq .Active "company-sso"}} active{{end}}">{{icon "link" 18}}{{t .Lang "nav.sso"}}</a>{{end}}
+    {{if .IsAdmin}}<a href="/company/integrations" class="nav-item{{if eq .Active "company-integrations"}} active{{end}}">{{icon "plug" 18}}{{t .Lang "nav.integrations"}}</a>{{end}}
+    <a href="/company/servicedesk" class="nav-item{{if eq .Active "company-servicedesk"}} active{{end}}">{{icon "lifebuoy" 18}}{{t .Lang "nav.servicedesk"}}</a>
+    {{if .IsAdmin}}<a href="/company/approvals" class="nav-item{{if eq .Active "company-approvals"}} active{{end}}">{{icon "check" 18}}{{t .Lang "nav.approvals"}}</a>{{end}}
+  </nav>
+
+  {{if .IsAdmin}}
+  <div class="sidebar-section">{{t .Lang "nav.group.system"}}</div>
+  <nav class="nav">
+    <a href="/system/audit-log" class="nav-item{{if eq .Active "system-audit"}} active{{end}}">{{icon "clipboard" 18}}{{t .Lang "nav.audit"}}</a>
+    <a href="/system/notifications" class="nav-item{{if eq .Active "system-notifications"}} active{{end}}">{{icon "bell" 18}}{{t .Lang "nav.notifications"}}</a>
+    <a href="/system/updates" class="nav-item{{if eq .Active "system-updates"}} active{{end}}">{{icon "refresh" 18}}{{t .Lang "nav.updates"}}</a>
+    <a href="/system/api-keys" class="nav-item{{if eq .Active "system-api-keys"}} active{{end}}">{{icon "key" 18}}{{t .Lang "nav.api_keys"}}</a>
+  </nav>
+  {{end}}
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="server-card">
+      <span class="status-dot"></span>
+      <div>
+        <div class="server-card-host">{{.Hostname}}</div>
+        <div class="server-card-meta">{{.ServerIP}} · {{t .Lang "nav.up_since"}} {{.Uptime}}</div>
+      </div>
+    </div>
+    <a href="#" class="nav-item">{{icon "gear" 17}}{{t .Lang "nav.settings"}}</a>
+    <form method="post" action="/logout" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <button type="submit" class="nav-item">{{icon "logout" 17}}{{t .Lang "nav.logout"}}</button>
+    </form>
+  </div>
+</aside>
+{{end}}

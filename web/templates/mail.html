@@ -1,0 +1,120 @@
+{{define "mail"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.mail"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.mail"}}</h1>
+        <p class="page-sub">{{t .Lang "mail.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if not .PostfixInstalled}}
+    <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px;">
+      <span>{{t .Lang "mail.postfix_not_detected"}}</span>
+      <form method="post" action="/company/mail/install" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="package" value="postfix">
+        <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "mail.install_postfix_button"}}</button>
+      </form>
+    </div>
+    {{end}}
+    {{if not .DovecotInstalled}}
+    <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px;">
+      <span>{{t .Lang "mail.dovecot_not_detected"}}</span>
+      <form method="post" action="/company/mail/install" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="package" value="dovecot-imapd">
+        <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "mail.install_dovecot_button"}}</button>
+      </form>
+    </div>
+    {{end}}
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    {{if .NewMailboxPass}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "mail.credentials_ready_title"}} — {{.NewMailboxAddr}}</div>
+      <div class="created-banner-row"><span class="kbd">{{.NewMailboxAddr}}</span><span class="kbd">{{.NewMailboxPass}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "mail.domains_title"}}</span></div>
+      <form method="post" action="/company/mail/domains" class="form-grid" style="grid-template-columns:2fr auto;align-items:end;margin-bottom:14px;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "mail.form_domain"}}</label>
+          <input class="input input-plain" type="text" name="domain" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "mail.add_domain_button"}}</button>
+      </form>
+      {{if not .Domains}}
+      <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "mail.domains_empty"}}</p>
+      {{else}}
+      {{range .Domains}}
+      <div class="accounts-row" style="grid-template-columns:2fr auto;">
+        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Domain}}</span>
+        <span class="row-actions">
+          <form method="post" action="/company/mail/domains/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+    <div class="panel" style="padding:22px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "mail.mailboxes_title"}}</span></div>
+      <form method="post" action="/company/mail/mailboxes" class="form-grid" style="grid-template-columns:2fr auto;align-items:end;margin-bottom:14px;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "mail.form_address"}}</label>
+          <input class="input input-plain" type="text" name="address" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "mail.add_mailbox_button"}}</button>
+      </form>
+      {{if not .Mailboxes}}
+      <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "mail.mailboxes_empty"}}</p>
+      {{else}}
+      {{range .Mailboxes}}
+      <div class="accounts-row" style="grid-template-columns:2fr auto auto;">
+        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Address}}</span>
+        <span class="row-actions">
+          <a href="/company/mail/mailboxes/{{.ID}}/inbox" class="link-action">{{icon "mail" 14}}{{t $.Lang "mail.view_inbox"}}</a>
+          <form method="post" action="/company/mail/mailboxes/{{.ID}}/reset-password">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action">{{t $.Lang "mail.reset_password"}}</button>
+          </form>
+        </span>
+        <span class="row-actions">
+          <form method="post" action="/company/mail/mailboxes/{{.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

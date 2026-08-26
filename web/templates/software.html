@@ -1,0 +1,62 @@
+{{define "software"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.software"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.software"}}</h1>
+        <p class="page-sub">{{t .Lang "software.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="info-chips" style="margin-bottom:16px;">
+      <div class="info-chip"><span class="info-chip-label">{{t .Lang "software.package_manager"}}</span><span class="info-chip-value">{{if .PackageManager}}{{.PackageManager}}{{else}}—{{end}}</span></div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+    {{if .InstalledName}}<div class="created-banner"><div class="created-banner-title">{{.InstalledName}} — {{t .Lang "software.installed_notice"}}</div></div>{{end}}
+
+    {{$lang := .Lang}}
+    {{range $group := .Groups}}
+    <div class="panel table-panel" style="margin-bottom:16px;">
+      <div class="panel-head" style="padding:16px 16px 0;"><span class="panel-title">{{t $lang (print "software.group." $group)}}</span></div>
+      {{range $.Rows}}
+      {{if eq .Group $group}}
+      <div class="accounts-row" style="grid-template-columns:1.6fr 1.2fr 1fr;">
+        <span style="font-size:13.5px;color:var(--text);">{{.Name}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Package}}</span>
+        <span class="row-actions">
+          {{if .Installed}}
+          <span class="status-badge status-active">{{t $lang "software.installed"}}</span>
+          {{else}}
+          <form method="post" action="/server/software/install">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="key" value="{{.Key}}">
+            <button type="submit" class="btn" style="padding:6px 14px;">{{icon "download" 13}}{{t $lang "software.install_button"}}</button>
+          </form>
+          {{end}}
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+    {{end}}
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,26 @@
+{{define "topbar"}}
+<div class="topbar">
+  <div class="search-box">
+    {{icon "search" 15}}
+    <span class="hint">{{t .Lang "topbar.search"}}</span>
+    <span class="kbd">⌘K</span>
+  </div>
+  <div class="topbar-right">
+    <div class="lang-switch">
+      <a href="/lang/uk" class="lang-flag{{if eq .Lang "uk"}} active{{end}}" title="Українська">🇺🇦</a>
+      <a href="/lang/en" class="lang-flag{{if eq .Lang "en"}} active{{end}}" title="English">🇬🇧</a>
+    </div>
+    <div class="vdivider"></div>
+    <div class="icon-btn">{{icon "bell" 16}}<span class="dot"></span></div>
+    <div class="vdivider"></div>
+    <div class="account">
+      <div class="avatar">{{.UserInitials}}</div>
+      <div>
+        <div class="account-name">{{.Username}}</div>
+        <div class="account-role">{{if .IsAdmin}}{{t .Lang "topbar.role.admin"}}{{else}}{{t .Lang "topbar.role.member"}}{{end}}</div>
+      </div>
+      {{icon "chevronDown" 14}}
+    </div>
+  </div>
+</div>
+{{end}}

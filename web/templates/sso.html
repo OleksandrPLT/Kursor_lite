@@ -1,0 +1,95 @@
+{{define "sso"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.sso"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.sso"}}</h1>
+        <p class="page-sub">{{t .Lang "sso.subtitle"}} · <a href="/.well-known/openid-configuration" style="font-family:var(--font-mono);">{{t .Lang "sso.discovery_hint"}}</a></p>
+      </div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+    {{if .NewClientID}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "sso.created_title"}}</div>
+      <div class="created-banner-row">
+        <span class="kbd">client_id: {{.NewClientID}}</span>
+        {{if .NewClientSecret}}<span class="kbd">secret: {{.NewClientSecret}}</span>{{end}}
+      </div>
+      <div class="created-banner-hint">{{if .NewClientSecret}}{{t .Lang "sso.created_hint"}}{{else}}{{t .Lang "sso.no_secret"}}{{end}}</div>
+    </div>
+    {{end}}
+
+    <details class="add-account">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "sso.add_button"}}</summary>
+      <form class="add-account-form" method="post" action="/company/sso">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <div>
+            <label class="field-label">{{t .Lang "sso.form_name"}}</label>
+            <input class="input input-plain" type="text" name="name" placeholder="My Internal App" required>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "sso.form_type"}}</label>
+            <select class="input input-plain" name="client_type">
+              <option value="confidential">{{t .Lang "sso.type.confidential"}}</option>
+              <option value="public">{{t .Lang "sso.type.public"}}</option>
+              <option value="service">{{t .Lang "sso.type.service"}}</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <label class="field-label">{{t .Lang "sso.form_redirects"}}</label>
+          <textarea name="redirect_uris" class="input input-plain" style="width:100%;min-height:80px;font-family:var(--font-mono);font-size:12.5px;" placeholder="https://app.example.com/callback"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">{{t .Lang "sso.form_name"}}</button>
+      </form>
+    </details>
+
+    <div class="panel table-panel">
+      {{if not .Clients}}
+      <div class="empty-inline">{{icon "link" 26}}<p>{{t .Lang "sso.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.8fr 1.4fr 2fr 1fr;">
+        <span class="table-head">{{t .Lang "sso.table_name"}}</span>
+        <span class="table-head">{{t .Lang "sso.table_type"}}</span>
+        <span class="table-head">{{t .Lang "sso.table_client_id"}}</span>
+        <span></span>
+      </div>
+      {{range .Clients}}
+      <div class="accounts-row" style="grid-template-columns:1.8fr 1.4fr 2fr 1fr;">
+        <span style="font-size:13.5px;color:var(--text);">{{.Name}}</span>
+        <span class="role-badge role-member">{{if eq .ClientType "confidential"}}{{t $.Lang "sso.type.confidential"}}{{else if eq .ClientType "public"}}{{t $.Lang "sso.type.public"}}{{else}}{{t $.Lang "sso.type.service"}}{{end}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.ID}}</span>
+        <span class="row-actions">
+          <form method="post" action="/company/sso/delete" onsubmit="return confirm('{{t $.Lang "files.confirm_delete"}}');">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="id" value="{{.ID}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

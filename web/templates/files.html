@@ -1,0 +1,153 @@
+{{define "files"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "files.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "files.title"}}</h1>
+        <div class="page-sub" style="font-family:var(--font-mono);">
+          <a href="/files">{{t .Lang "files.root_label"}}</a>
+          {{range .Breadcrumbs}} <span style="color:var(--muted-2);">/</span> <a href="/files?path={{.Path}}">{{.Name}}</a>{{end}}
+        </div>
+      </div>
+    </div>
+
+    {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}</div>{{end}}
+
+    {{if .Editing}}
+      <div class="panel" style="padding:22px;">
+        <div class="panel-title" style="margin-bottom:14px;font-family:var(--font-mono);">{{t .Lang "files.edit_title"}}: {{.EditPath}}</div>
+        {{if .EditTooLarge}}
+          <p style="color:var(--muted);">{{t .Lang "files.too_large"}}</p>
+          <a class="btn" href="/files/download?path={{.EditPath}}">{{icon "download" 15}}{{t .Lang "files.action_download"}}</a>
+        {{else if .EditNotText}}
+          <p style="color:var(--muted);">{{t .Lang "files.not_text"}}</p>
+          <a class="btn" href="/files/download?path={{.EditPath}}">{{icon "download" 15}}{{t .Lang "files.action_download"}}</a>
+        {{else}}
+          <form method="post" action="/files/edit">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.EditPath}}">
+            <textarea name="content" spellcheck="false" style="width:100%;min-height:480px;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-family:var(--font-mono);font-size:12.5px;line-height:1.6;">{{.EditContent}}</textarea>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button type="submit" class="btn btn-primary">{{t .Lang "files.save"}}</button>
+              <a class="btn" href="/files?path={{.CurrentPath}}">{{t .Lang "files.cancel"}}</a>
+            </div>
+          </form>
+        {{end}}
+      </div>
+    {{else}}
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <form method="post" action="/files/upload?path={{.CurrentPath}}" enctype="multipart/form-data" style="display:flex;align-items:center;gap:8px;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="file" name="file" required style="font-size:12px;color:var(--muted);max-width:180px;">
+        <button type="submit" class="btn">{{icon "upload" 15}}{{t .Lang "files.upload"}}</button>
+      </form>
+
+      <details style="display:inline-block;">
+        <summary class="btn" style="list-style:none;cursor:pointer;display:inline-flex;">{{icon "folder" 15}}{{t .Lang "files.new_folder"}}</summary>
+        <form method="post" action="/files/create" style="display:flex;gap:8px;margin-top:8px;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <input type="hidden" name="path" value="{{.CurrentPath}}">
+          <input type="hidden" name="kind" value="dir">
+          <input class="input input-plain" type="text" name="name" placeholder="folder-name" required>
+          <button type="submit" class="btn btn-primary">{{t .Lang "org.add"}}</button>
+        </form>
+      </details>
+
+      <details style="display:inline-block;">
+        <summary class="btn" style="list-style:none;cursor:pointer;display:inline-flex;">{{icon "file" 15}}{{t .Lang "files.new_file"}}</summary>
+        <form method="post" action="/files/create" style="display:flex;gap:8px;margin-top:8px;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <input type="hidden" name="path" value="{{.CurrentPath}}">
+          <input type="hidden" name="kind" value="file">
+          <input class="input input-plain" type="text" name="name" placeholder="file.txt" required>
+          <button type="submit" class="btn btn-primary">{{t .Lang "org.add"}}</button>
+        </form>
+      </details>
+    </div>
+
+    <div class="panel table-panel">
+      {{if not .Rows}}
+      <div class="empty-inline">{{icon "folder" 26}}<p>{{t .Lang "files.empty"}}</p></div>
+      {{else}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:2.4fr 1fr 1.2fr 1.4fr 1.6fr;">
+        <span class="table-head">{{t .Lang "files.table_name"}}</span>
+        <span class="table-head">{{t .Lang "files.table_size"}}</span>
+        <span class="table-head">{{t .Lang "files.table_modified"}}</span>
+        <span class="table-head">{{t .Lang "files.table_perms"}}</span>
+        <span></span>
+      </div>
+      {{range .Rows}}
+      <div class="accounts-row" style="grid-template-columns:2.4fr 1fr 1.2fr 1.4fr 1.6fr;">
+        <span class="account-cell">
+          {{if .IsDir}}
+            <span class="icon-chip">{{icon "folder" 14}}</span>
+            <a href="/files?path={{.Path}}" class="account-cell-name" style="color:var(--text);">{{.Name}}</a>
+          {{else}}
+            <span class="icon-chip" style="background:var(--panel-2);">{{icon "file" 14}}</span>
+            <span class="account-cell-name">{{.Name}}</span>
+          {{end}}
+        </span>
+        <span class="cell-muted">{{if .IsDir}}—{{else}}{{.SizeText}}{{end}}</span>
+        <span class="cell-muted">{{.Modified}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);">{{.Mode}}</span>
+        <span class="row-actions">
+          {{if not .IsDir}}
+          <a href="/files/edit?path={{.Path}}" class="link-action" title="{{t $.Lang "files.action_edit"}}">{{icon "pencil" 14}}</a>
+          <a href="/files/download?path={{.Path}}" class="link-action" title="{{t $.Lang "files.action_download"}}">{{icon "download" 14}}</a>
+          {{end}}
+          <form method="post" action="/files/rename" onsubmit="var n=prompt('{{t $.Lang "files.new_name_prompt"}}','{{.Name}}'); if(!n){return false;} this.new_name.value=n;">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.Path}}">
+            <input type="hidden" name="new_name" value="">
+            <button type="submit" class="link-action" title="{{t $.Lang "files.action_rename"}}">{{icon "tag" 14}}</button>
+          </form>
+          <form method="post" action="/files/move" onsubmit="var n=prompt('{{t $.Lang "files.move_prompt"}}',''); if(n===null){return false;} this.dest_dir.value=n;">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.Path}}">
+            <input type="hidden" name="dest_dir" value="">
+            <button type="submit" class="link-action" title="{{t $.Lang "files.action_move"}}">{{icon "move" 14}}</button>
+          </form>
+          <form method="post" action="/files/copy" onsubmit="var n=prompt('{{t $.Lang "files.copy_prompt"}}','{{.Path}}-copy'); if(!n){return false;} this.dest.value=n;">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.Path}}">
+            <input type="hidden" name="dest" value="">
+            <button type="submit" class="link-action" title="{{t $.Lang "files.action_copy"}}">{{icon "copy" 14}}</button>
+          </form>
+          <form method="post" action="/files/chmod" onsubmit="var n=prompt('{{t $.Lang "files.chmod_prompt"}}','{{.OctalMode}}'); if(!n){return false;} this.mode.value=n;">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.Path}}">
+            <input type="hidden" name="mode" value="">
+            <button type="submit" class="link-action" title="{{t $.Lang "files.action_chmod"}}">{{icon "lock" 14}}</button>
+          </form>
+          <form method="post" action="/files/delete" onsubmit="return confirm('{{t $.Lang "files.confirm_delete"}}');">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="path" value="{{.Path}}">
+            <button type="submit" class="link-action link-danger" title="{{t $.Lang "files.action_delete"}}">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
+    {{end}}
+  </div>
+</div>
+</body>
+</html>
+{{end}}

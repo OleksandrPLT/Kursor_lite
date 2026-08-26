@@ -1,0 +1,213 @@
+{{define "network_domains"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.domains"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.domains"}}</h1>
+        <p class="page-sub">{{t .Lang "domains.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="info-chips" style="margin-bottom:14px;">
+      <div class="info-chip"><span class="info-chip-label">{{t .Lang "domains.server_ip"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{if .ServerIP}}{{.ServerIP}}{{else}}—{{end}}</span></div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <details class="add-account" style="margin-bottom:16px;">
+      <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "domains.add_button"}}</summary>
+      <form class="add-account-form" method="post" action="/network/domains">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="form-grid" style="grid-template-columns:1.6fr 1fr 1fr;">
+          <div>
+            <label class="field-label">{{t .Lang "domains.form_domain"}}</label>
+            <input class="input input-plain" type="text" name="domain" placeholder="example.com" required>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "domains.form_registrar"}}</label>
+            <input class="input input-plain" type="text" name="registrar">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "domains.form_expires_at"}}</label>
+            <input class="input input-plain" type="date" name="expires_at">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "domains.form_contact_email"}}</label>
+            <input class="input input-plain" type="email" name="contact_email">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "domains.form_tags"}}</label>
+            <input class="input input-plain" type="text" name="tags" placeholder="prod, client-x">
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;margin-top:20px;">
+            <label class="permission-check"><input type="checkbox" name="auto_renew">{{t .Lang "domains.form_auto_renew"}}</label>
+            <label class="permission-check"><input type="checkbox" name="whois_privacy">{{t .Lang "domains.form_whois_privacy"}}</label>
+            <label class="permission-check"><input type="checkbox" name="dnssec">{{t .Lang "domains.form_dnssec"}}</label>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label class="field-label">{{t .Lang "domains.form_notes"}}</label>
+          <input class="input input-plain" type="text" name="notes" style="width:100%;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:14px;">{{t .Lang "domains.create_button"}}</button>
+      </form>
+    </details>
+
+    {{if not .Rows}}
+    <div class="panel table-panel"><div class="empty-inline">{{icon "globe" 26}}<p>{{t .Lang "domains.empty"}}</p></div></div>
+    {{else}}
+    {{$lang := .Lang}}
+    {{$csrf := .CSRFToken}}
+    {{range .Rows}}
+    <div class="panel" style="margin-bottom:14px;padding:18px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:15px;font-weight:600;color:var(--text);font-family:var(--font-mono);">{{.Domain.Domain}}</span>
+          {{if .DNS.LookupError}}
+          <span class="status-badge status-disabled">{{t $lang "domains.dns_error"}}</span>
+          {{else if .DNS.PointsHere}}
+          <span class="status-badge status-active">{{t $lang "domains.points_here"}}</span>
+          {{else}}
+          <span class="status-badge" style="background:rgba(255,138,61,0.14);color:var(--warn);">{{t $lang "domains.not_pointing"}}</span>
+          {{end}}
+          {{if .HasExpiry}}
+            {{if lt .ExpiresDaysLeft 0}}<span class="status-badge status-disabled">{{t $lang "domains.expired"}}</span>
+            {{else if lt .ExpiresDaysLeft 30}}<span class="status-badge" style="background:rgba(255,138,61,0.14);color:var(--warn);">{{.ExpiresDaysLeft}} {{t $lang "domains.expires_days_left"}}</span>{{end}}
+          {{end}}
+          {{if .Domain.WHOISPrivacy}}<span class="status-badge status-active" style="opacity:0.75;">WHOIS 🔒</span>{{end}}
+          {{if .Domain.DNSSEC}}<span class="status-badge status-active" style="opacity:0.75;">DNSSEC ✓</span>{{end}}
+          {{range .Domain.TagsList}}<span class="cell-muted" style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 7px;">{{.}}</span>{{end}}
+        </div>
+        <span class="row-actions">
+          <form method="post" action="/network/domains/{{.Domain.ID}}/delete">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </span>
+      </div>
+
+      <div class="info-chips" style="margin-top:12px;">
+        <div class="info-chip">
+          <span class="info-chip-label">{{t $lang "domains.resolved_ips"}}</span>
+          <span class="info-chip-value">{{if .DNS.ResolvedIPs}}{{range $i, $ip := .DNS.ResolvedIPs}}{{if $i}}, {{end}}{{$ip}}{{end}}{{else}}—{{end}}</span>
+        </div>
+        <div class="info-chip">
+          <span class="info-chip-label">{{t $lang "domains.nameservers"}}</span>
+          <span class="info-chip-value cell-muted">{{if .DNS.Nameservers}}{{range $i, $ns := .DNS.Nameservers}}{{if $i}}, {{end}}{{$ns}}{{end}}{{else}}—{{end}}</span>
+        </div>
+        <div class="info-chip">
+          <span class="info-chip-label">{{t $lang "domains.linked_site"}}</span>
+          {{if .LinkedSite}}
+          <span class="info-chip-value"><a href="/sites" style="color:var(--accent);">{{.LinkedSite.Domain}}</a>{{if .Cert.Exists}} · SSL {{.Cert.DaysLeft}}d{{end}}</span>
+          {{else}}
+          <span class="info-chip-value cell-muted">{{t $lang "domains.no_site"}}</span>
+          {{end}}
+        </div>
+        {{if .Domain.Registrar}}<div class="info-chip"><span class="info-chip-label">{{t $lang "domains.form_registrar"}}</span><span class="info-chip-value">{{.Domain.Registrar}}</span></div>{{end}}
+        {{if .Domain.ContactEmail}}<div class="info-chip"><span class="info-chip-label">{{t $lang "domains.form_contact_email"}}</span><span class="info-chip-value">{{.Domain.ContactEmail}}</span></div>{{end}}
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        {{if not .LinkedSite}}
+        <form method="post" action="/sites">
+          <input type="hidden" name="csrf_token" value="{{$csrf}}">
+          <input type="hidden" name="domain" value="{{.Domain.Domain}}">
+          <button type="submit" class="btn" style="padding:6px 14px;">{{icon "globe" 13}}{{t $lang "domains.create_site_button"}}</button>
+        </form>
+        {{end}}
+
+        <form method="post" action="/network/domains/{{.Domain.ID}}/create-subdomain" style="display:flex;align-items:center;gap:6px;" title="{{t $lang "domains.subdomain_dns_note"}}">
+          <input type="hidden" name="csrf_token" value="{{$csrf}}">
+          <input class="input input-plain" type="text" name="label" placeholder="{{t $lang "domains.subdomain_placeholder"}}" style="width:110px;padding:6px 10px;">
+          <span class="cell-muted" style="font-family:var(--font-mono);">.{{.Domain.Domain}}</span>
+          <button type="submit" class="btn" style="padding:6px 14px;">{{icon "plus" 13}}{{t $lang "domains.create_subdomain_button"}}</button>
+        </form>
+
+        <details style="flex:1;">
+          <summary class="btn" style="padding:6px 14px;display:inline-flex;">{{t $lang "domains.edit_button"}}</summary>
+          <form method="post" action="/network/domains/{{.Domain.ID}}/update" class="form-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px;">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <div>
+              <label class="field-label">{{t $lang "domains.form_registrar"}}</label>
+              <input class="input input-plain" type="text" name="registrar" value="{{.Domain.Registrar}}">
+            </div>
+            <div>
+              <label class="field-label">{{t $lang "domains.form_expires_at"}}</label>
+              <input class="input input-plain" type="date" name="expires_at" value="{{.Domain.ExpiresAt}}">
+            </div>
+            <div>
+              <label class="field-label">{{t $lang "domains.form_contact_email"}}</label>
+              <input class="input input-plain" type="email" name="contact_email" value="{{.Domain.ContactEmail}}">
+            </div>
+            <div>
+              <label class="field-label">{{t $lang "domains.form_tags"}}</label>
+              <input class="input input-plain" type="text" name="tags" value="{{.Domain.Tags}}">
+            </div>
+            <div>
+              <label class="field-label">{{t $lang "domains.form_notes"}}</label>
+              <input class="input input-plain" type="text" name="notes" value="{{.Domain.Notes}}">
+            </div>
+            <div style="display:flex;gap:14px;align-items:center;margin-top:20px;">
+              <label class="permission-check"><input type="checkbox" name="auto_renew"{{if .Domain.AutoRenew}} checked{{end}}>{{t $lang "domains.form_auto_renew"}}</label>
+              <label class="permission-check"><input type="checkbox" name="whois_privacy"{{if .Domain.WHOISPrivacy}} checked{{end}}>{{t $lang "domains.form_whois_privacy"}}</label>
+              <label class="permission-check"><input type="checkbox" name="dnssec"{{if .Domain.DNSSEC}} checked{{end}}>{{t $lang "domains.form_dnssec"}}</label>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{t $lang "domains.save_button"}}</button>
+          </form>
+        </details>
+      </div>
+
+      <details style="margin-top:12px;">
+        <summary class="cell-muted" style="cursor:pointer;font-size:12px;">{{t $lang "domains.records_title"}} ({{len .Records}})</summary>
+        <div style="margin-top:10px;">
+          {{if not .Records}}
+          <p style="font-size:12px;color:var(--muted);">{{t $lang "domains.no_records"}}</p>
+          {{else}}
+          {{range .Records}}
+          <div class="accounts-row" style="grid-template-columns:1.4fr 0.6fr 1.6fr;padding:7px 0;">
+            <span class="cell-muted" style="font-family:var(--font-mono);">{{.Name}}</span>
+            <span class="cell-muted">{{.Type}}</span>
+            <span class="cell-muted" style="font-family:var(--font-mono);">{{.Value}}{{if eq .Type "MX"}} ({{.Priority}}){{end}}</span>
+          </div>
+          {{end}}
+          {{end}}
+          <form method="post" action="/network/domains/records" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input class="input input-plain" type="text" name="name" placeholder="{{t $lang "dns.form_name"}}" style="flex:1;min-width:160px;">
+            <select class="input input-plain" name="type" style="width:100px;">
+              <option value="A">A</option>
+              <option value="AAAA">AAAA</option>
+              <option value="CNAME">CNAME</option>
+              <option value="MX">MX</option>
+              <option value="TXT">TXT</option>
+            </select>
+            <input class="input input-plain" type="text" name="value" placeholder="{{t $lang "dns.form_value"}}" style="flex:1;min-width:160px;">
+            <input class="input input-plain" type="number" name="priority" placeholder="{{t $lang "dns.form_priority"}}" style="width:90px;" value="10">
+            <button type="submit" class="btn" style="padding:6px 14px;">{{t $lang "domains.add_record_button"}}</button>
+          </form>
+        </div>
+      </details>
+    </div>
+    {{end}}
+    <p style="font-size:11.5px;color:var(--muted);">{{t .Lang "domains.recheck_hint"}}</p>
+    {{end}}
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}
