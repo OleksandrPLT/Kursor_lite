@@ -187,6 +187,9 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 			r.Post("/network/ssh/keys/delete", s.handleSSHKeyDelete)
 			r.Post("/network/ssh/port", s.handleSSHPortUpdate)
 			r.Post("/network/ssh/password-auth", s.handleSSHPasswordAuthUpdate)
+			r.Post("/network/ssh/users", s.handleSysUserCreate)
+			r.Post("/network/ssh/users/reset-password", s.handleSysUserResetPassword)
+			r.Post("/network/ssh/users/lock", s.handleSysUserLock)
 		})
 
 		r.Get("/monitor/stream", s.monitor.ServeStream)

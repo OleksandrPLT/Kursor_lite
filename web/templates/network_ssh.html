@@ -83,6 +83,68 @@
       </div>
     </div>
 
+    {{if .NewSysPassword}}
+    <div class="created-banner" style="margin-top:16px;">
+      <div class="created-banner-title">{{t .Lang "sysusers.credentials_ready_title"}}</div>
+      <div class="created-banner-row"><span class="kbd">{{.NewSysUsername}}</span><span class="kbd">{{.NewSysPassword}}</span></div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    <div class="panel" style="padding:20px;margin-top:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "sysusers.title"}}</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">{{t .Lang "sysusers.subtitle"}}</p>
+
+      <form method="post" action="/network/ssh/users" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:16px;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div style="flex:1;">
+          <label class="field-label">{{t .Lang "sysusers.form_username"}}</label>
+          <input class="input input-plain" type="text" name="username" placeholder="ivanenko" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "sysusers.create_button"}}</button>
+      </form>
+
+      {{if not .SystemUsers}}
+      <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "sysusers.empty"}}</p>
+      {{else}}
+      {{$lang := .Lang}}
+      {{$csrf := .CSRFToken}}
+      <div class="accounts-row accounts-row-head" style="grid-template-columns:1.4fr 0.6fr 1.4fr 0.9fr 1.6fr;">
+        <span class="table-head">{{t $lang "sysusers.table_username"}}</span>
+        <span class="table-head">{{t $lang "sysusers.table_uid"}}</span>
+        <span class="table-head">{{t $lang "sysusers.table_shell"}}</span>
+        <span class="table-head">{{t $lang "accounts.table_status"}}</span>
+        <span></span>
+      </div>
+      {{range .SystemUsers}}
+      <div class="accounts-row" style="grid-template-columns:1.4fr 0.6fr 1.4fr 0.9fr 1.6fr;">
+        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Username}}</span>
+        <span class="cell-muted">{{.UID}}</span>
+        <span class="cell-muted" style="font-family:var(--font-mono);font-size:12px;">{{.Shell}}</span>
+        <span class="status-badge status-{{if .Locked}}disabled{{else}}active{{end}}">{{if .Locked}}{{t $lang "sysusers.status_locked"}}{{else}}{{t $lang "sysusers.status_active"}}{{end}}</span>
+        <span class="row-actions">
+          <form method="post" action="/network/ssh/users/reset-password">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input type="hidden" name="username" value="{{.Username}}">
+            <button type="submit" class="link-action">{{t $lang "sysusers.reset_password"}}</button>
+          </form>
+          <form method="post" action="/network/ssh/users/lock">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input type="hidden" name="username" value="{{.Username}}">
+            {{if .Locked}}
+            <input type="hidden" name="action" value="unlock">
+            <button type="submit" class="link-action">{{t $lang "sysusers.unlock_button"}}</button>
+            {{else}}
+            <input type="hidden" name="action" value="lock">
+            <button type="submit" class="link-action link-danger">{{t $lang "sysusers.lock_button"}}</button>
+            {{end}}
+          </form>
+        </span>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+
   </div>
 </div>
 </body>

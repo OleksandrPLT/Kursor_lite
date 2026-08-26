@@ -9,6 +9,7 @@ import (
 	kfw "kursor/internal/firewall"
 	kssh "kursor/internal/sshadmin"
 	"kursor/internal/store"
+	ksys "kursor/internal/sysusers"
 )
 
 // sshTargetUser is whose authorized_keys/login this page manages — root,
@@ -20,19 +21,24 @@ const sshTargetUser = "root"
 // SSHData backs the SSH page.
 type SSHData struct {
 	PageData
-	Config       kssh.Config
-	Keys         []kssh.AuthorizedKey
-	FormErrorKey string
-	ErrorDetail  string
+	Config         kssh.Config
+	Keys           []kssh.AuthorizedKey
+	SystemUsers    []ksys.SystemUser
+	NewSysUsername string
+	NewSysPassword string
+	FormErrorKey   string
+	ErrorDetail    string
 }
 
 func (s *Server) loadSSHData(w http.ResponseWriter, r *http.Request, sess *store.Session) SSHData {
 	cfg, _ := kssh.GetConfig()
 	keys, _ := kssh.ListAuthorizedKeys(sshTargetUser)
+	sysUsers, _ := ksys.ListSystemUsers()
 	return SSHData{
-		PageData: s.basePageData(w, r, "network-ssh", sess),
-		Config:   cfg,
-		Keys:     keys,
+		PageData:    s.basePageData(w, r, "network-ssh", sess),
+		Config:      cfg,
+		Keys:        keys,
+		SystemUsers: sysUsers,
 	}
 }
 

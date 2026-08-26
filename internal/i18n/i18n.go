@@ -553,6 +553,27 @@ var dict = map[string]map[string]string{
 	"sshadmin.error.firewall": {"uk": "Не вдалось відкрити новий порт у фаєрволі:", "en": "Couldn't open the new port in the firewall:"},
 	"sshadmin.error.apply": {"uk": "Помилка:", "en": "Error:"},
 
+	// --- System users (real useradd/usermod/chpasswd, not a placeholder) ---
+	"sysusers.title": {"uk": "Системні користувачі", "en": "System Users"},
+	"sysusers.subtitle": {"uk": "Реальні Linux-акаунти (useradd/usermod) — окремо від акаунтів панелі.", "en": "Real Linux accounts (useradd/usermod) — separate from panel accounts."},
+	"sysusers.add_button": {"uk": "Новий системний користувач", "en": "New System User"},
+	"sysusers.form_username": {"uk": "Ім'я користувача", "en": "Username"},
+	"sysusers.create_button": {"uk": "Створити", "en": "Create"},
+	"sysusers.credentials_ready_title": {"uk": "Пароль системного користувача — збережіть його зараз", "en": "System user password — save it now"},
+	"sysusers.error.invalid_username": {"uk": "Некоректне ім'я користувача (латиниця у нижньому регістрі, цифри, _ та -).", "en": "Invalid username (lowercase letters, digits, _ and - only)."},
+	"sysusers.error.create": {"uk": "Не вдалось створити користувача:", "en": "Couldn't create the user:"},
+	"sysusers.error.reset": {"uk": "Не вдалось скинути пароль:", "en": "Couldn't reset the password:"},
+	"sysusers.error.lock": {"uk": "Не вдалось змінити статус:", "en": "Couldn't change the status:"},
+	"sysusers.table_username": {"uk": "Ім'я", "en": "Username"},
+	"sysusers.table_uid": {"uk": "UID", "en": "UID"},
+	"sysusers.table_shell": {"uk": "Shell", "en": "Shell"},
+	"sysusers.empty": {"uk": "Немає системних користувачів (окрім root).", "en": "No system users (besides root)."},
+	"sysusers.reset_password": {"uk": "Скинути пароль", "en": "Reset Password"},
+	"sysusers.lock_button": {"uk": "Заблокувати", "en": "Lock"},
+	"sysusers.unlock_button": {"uk": "Розблокувати", "en": "Unlock"},
+	"sysusers.status_locked": {"uk": "заблоковано", "en": "locked"},
+	"sysusers.status_active": {"uk": "активний", "en": "active"},
+
 	// --- System Updates (real GitHub check, not a placeholder) ---
 	"updates.subtitle": {"uk": "Перевірка нової версії на GitHub — саме оновлення виконується скриптом.", "en": "Checks GitHub for a newer version — the update itself runs via a script."},
 	"updates.running_title": {"uk": "Поточна збірка", "en": "Running build"},
