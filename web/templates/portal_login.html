@@ -1,10 +1,10 @@
-{{define "login"}}
+{{define "portal_login"}}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · Kursor by Intech</title>
+<title>{{t .Lang "portal.title"}} · Kursor by Intech</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/app.css">
@@ -26,27 +26,21 @@
       </div>
       <div>
         <div class="brand-name" style="font-size:18px;">Kursor</div>
-        <div class="brand-sub">by Intech</div>
+        <div class="brand-sub">{{t .Lang "portal.title"}}</div>
       </div>
     </div>
 
     <div>
-      <h1 class="login-headline">{{t .Lang "login.headline"}}</h1>
-      <p class="login-sub">{{t .Lang "login.sub"}}</p>
-      <div class="login-features">
-        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature1"}}</div>
-        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature2"}}</div>
-        <div class="login-feature">{{icon "check" 18}}{{t .Lang "login.feature3"}}</div>
-      </div>
+      <h1 class="login-headline">{{t .Lang "portal.headline"}}</h1>
+      <p class="login-sub">{{t .Lang "portal.sub"}}</p>
     </div>
 
-    <span class="login-footer">KURSOR BY INTECH · V0.1.0</span>
+    <span class="login-footer">KURSOR BY INTECH</span>
   </div>
 
   <div class="login-form-wrap">
-    <form class="login-form" method="post" action="/login">
+    <form class="login-form" method="post" action="/portal/login">
       <h2>{{t .Lang "login.welcome"}}</h2>
-      <p class="login-target">{{t .Lang "login.target"}}</p>
 
       {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}</div>{{end}}
 
@@ -65,8 +59,7 @@
       </div>
 
       <button type="submit" class="btn btn-primary btn-block">{{t .Lang "login.submit"}}</button>
-      <p class="form-hint">{{t .Lang "login.forgot"}}</p>
-      <p class="form-hint"><a href="/portal/login" style="color:var(--accent);">{{t .Lang "portal.title"}} →</a></p>
+      <p class="form-hint"><a href="/login" style="color:var(--accent);">Kursor by Intech →</a></p>
     </form>
   </div>
 </div>

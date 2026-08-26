@@ -43,6 +43,23 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// requirePortalAuth is requireAuth's twin for the /portal/* routes —
+// same session check, just bounces an unauthenticated visitor to the
+// portal's own minimal login page instead of the main panel's, so
+// someone with no reason to ever see the admin UI never ends up there
+// by accident.
+func (s *Server) requirePortalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sess := auth.CurrentSession(r, s.store)
+		if sess == nil {
+			http.Redirect(w, r, "/portal/login", http.StatusSeeOther)
+			return
+		}
+		ctx := context.WithValue(r.Context(), sessionContextKey, sess)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func sessionFromContext(r *http.Request) *store.Session {
 	sess, _ := r.Context().Value(sessionContextKey).(*store.Session)
 	return sess

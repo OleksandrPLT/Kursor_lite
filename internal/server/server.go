@@ -51,6 +51,23 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 	r.Post("/login", s.handleLoginSubmit)
 	r.Post("/logout", s.handleLogout)
 
+	// The Service Desk portal — a minimal, sidebar-free surface for
+	// accounts that only ever need to submit/track their own tickets.
+	// Same accounts/session cookie as the main panel (see portal.go's
+	// doc comment), just a different login page and a stricter,
+	// always-"my own tickets" set of routes.
+	r.Get("/portal/login", s.handlePortalLoginPage)
+	r.Post("/portal/login", s.handlePortalLoginSubmit)
+	r.Post("/portal/logout", s.handlePortalLogout)
+	r.Group(func(r chi.Router) {
+		r.Use(s.requirePortalAuth)
+		r.Get("/portal", s.handlePortalPage)
+		r.Post("/portal/tickets", s.handlePortalTicketCreate)
+		r.Get("/portal/tickets/{id}", s.handlePortalTicketPage)
+		r.Post("/portal/tickets/{id}/comments", s.handlePortalTicketComment)
+		r.Get("/portal/tickets/{id}/attachments/{attachment_id}", s.handlePortalAttachmentDownload)
+	})
+
 	r.Get("/lang/{code}", func(w http.ResponseWriter, r *http.Request) {
 		s.handleSetLang(w, r, chi.URLParam(r, "code"))
 	})

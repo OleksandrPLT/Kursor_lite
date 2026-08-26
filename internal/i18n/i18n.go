@@ -607,6 +607,14 @@ var dict = map[string]map[string]string{
 	// --- Ticket attachments (real, not a placeholder) ---
 	"servicedesk.form_attachment": {"uk": "Файл (необов'язково, до 10 МБ)", "en": "File (optional, up to 10 MB)"},
 
+	// --- Service Desk portal (separate, minimal, no-sidebar surface) ---
+	"portal.title":    {"uk": "Портал звернень", "en": "Support Portal"},
+	"portal.headline": {"uk": "Подайте звернення", "en": "File a request"},
+	"portal.sub":      {"uk": "Увійдіть, щоб подати чи відстежити своє звернення.", "en": "Sign in to file or track your own requests."},
+	"portal.subtitle": {"uk": "Ваші звернення до служби підтримки.", "en": "Your support requests."},
+	"portal.my_tickets": {"uk": "Мої звернення", "en": "My Requests"},
+	"portal.new_ticket_button": {"uk": "Нове звернення", "en": "New Request"},
+
 	// --- backups (real, not a placeholder) ---
 	"backups.subtitle":     {"uk": "Реальні tar.gz архіви сайтів.", "en": "Real tar.gz site archives."},
 	"backups.form_source":  {"uk": "Що архівувати", "en": "What to back up"},

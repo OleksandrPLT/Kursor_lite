@@ -1,0 +1,110 @@
+{{define "portal"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "portal.title"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div style="max-width:920px;margin:0 auto;padding:28px 20px 60px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="brand-mark" style="width:30px;height:30px;">
+        <svg width="13" height="19" viewBox="0 0 14 20">
+          <rect class="bar-yellow" x="4" y="0" width="6" height="14" rx="3"/>
+          <rect class="bar-blue" x="4" y="16" width="6" height="4" rx="2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name" style="font-size:15px;">Kursor</div>
+        <div class="brand-sub" style="font-size:10.5px;">{{t .Lang "portal.title"}}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="lang-switch">
+        <a href="/lang/uk" class="lang-flag{{if eq .Lang "uk"}} active{{end}}" title="Українська">🇺🇦</a>
+        <a href="/lang/en" class="lang-flag{{if eq .Lang "en"}} active{{end}}" title="English">🇬🇧</a>
+      </div>
+      <div class="avatar avatar-sm">{{.UserInitials}}</div>
+      <span style="font-size:13px;color:var(--text);">{{.Username}}</span>
+      <form method="post" action="/portal/logout" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="link-action">{{icon "logout" 14}}</button>
+      </form>
+    </div>
+  </div>
+
+  <h1 class="page-title" style="margin-bottom:6px;">{{t .Lang "portal.my_tickets"}}</h1>
+  <p class="page-sub" style="margin-bottom:20px;">{{t .Lang "portal.subtitle"}}</p>
+
+  {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+
+  <details class="add-account" style="margin-bottom:20px;">
+    <summary class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "portal.new_ticket_button"}}</summary>
+    <form class="add-account-form" method="post" action="/portal/tickets" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr;">
+        <div>
+          <label class="field-label">{{t .Lang "servicedesk.form_title"}}</label>
+          <input class="input input-plain" type="text" name="title" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "servicedesk.form_topic"}}</label>
+          <select class="input input-plain" name="topic">
+            {{$lang := .Lang}}
+            {{range .Topics}}<option value="{{.Key}}">{{topicLabel $lang .Key}}</option>{{end}}
+          </select>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "servicedesk.form_priority"}}</label>
+          <select class="input input-plain" name="priority">
+            <option value="low">{{t .Lang "servicedesk.priority.low"}}</option>
+            <option value="medium" selected>{{t .Lang "servicedesk.priority.medium"}}</option>
+            <option value="high">{{t .Lang "servicedesk.priority.high"}}</option>
+            <option value="critical">{{t .Lang "servicedesk.priority.critical"}}</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="field-label">{{t .Lang "servicedesk.form_description"}}</label>
+        <textarea name="description" class="input input-plain" style="width:100%;min-height:90px;"></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="field-label">{{t .Lang "servicedesk.form_attachment"}}</label>
+        <input class="input input-plain" type="file" name="attachment">
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:14px;">{{t .Lang "servicedesk.submit"}}</button>
+    </form>
+  </details>
+
+  <div class="panel table-panel">
+    {{if not .Tickets}}
+    <div class="empty-inline">{{icon "lifebuoy" 26}}<p>{{t .Lang "servicedesk.empty"}}</p></div>
+    {{else}}
+    <div class="accounts-row accounts-row-head" style="grid-template-columns:0.8fr 2fr 1fr 1fr 1fr;">
+      <span class="table-head">{{t .Lang "servicedesk.table_id"}}</span>
+      <span class="table-head">{{t .Lang "servicedesk.table_title"}}</span>
+      <span class="table-head">{{t .Lang "servicedesk.table_priority"}}</span>
+      <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
+      <span class="table-head">{{t .Lang "servicedesk.table_due"}}</span>
+    </div>
+    {{$lang := .Lang}}
+    {{range .Tickets}}
+    <a href="/portal/tickets/{{.ID}}" class="accounts-row" style="grid-template-columns:0.8fr 2fr 1fr 1fr 1fr;text-decoration:none;">
+      <span class="cell-muted" style="font-family:var(--font-mono);">{{.DisplayID}}</span>
+      <span style="font-size:13.5px;color:var(--text);">{{.Title}}</span>
+      <span class="role-badge role-{{if or (eq .Priority "critical") (eq .Priority "high")}}admin{{else}}member{{end}}">{{t $lang (print "servicedesk.priority." .Priority)}}</span>
+      <span class="status-badge status-{{if eq .Status "resolved"}}active{{else if eq .Status "closed"}}disabled{{else}}active{{end}}">{{t $lang (print "servicedesk.status." .Status)}}</span>
+      <span class="cell-muted" style="{{if .IsOverdue}}color:var(--bad);{{end}}">{{.DueAt.Format "Jan 2, 15:04"}}</span>
+    </a>
+    {{end}}
+    {{end}}
+  </div>
+</div>
+</body>
+</html>
+{{end}}

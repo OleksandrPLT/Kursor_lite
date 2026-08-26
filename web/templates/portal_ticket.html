@@ -1,0 +1,85 @@
+{{define "portal_ticket"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Ticket.Title}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div style="max-width:820px;margin:0 auto;padding:28px 20px 60px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <a href="/portal" class="back-link" style="margin:0;">{{t .Lang "ticket.back"}}</a>
+    <form method="post" action="/portal/logout" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <button type="submit" class="link-action">{{icon "logout" 14}}</button>
+    </form>
+  </div>
+
+  <h1 class="page-title" style="font-family:var(--font-mono);">{{.Ticket.DisplayID}}</h1>
+  <p class="page-sub" style="font-size:14px;color:var(--text);font-family:var(--font-sans);margin-bottom:6px;">{{.Ticket.Title}}</p>
+  <p class="page-sub" style="margin-bottom:20px;">
+    <span class="role-badge role-{{if or (eq .Ticket.Priority "critical") (eq .Ticket.Priority "high")}}admin{{else}}member{{end}}">{{t .Lang (print "servicedesk.priority." .Ticket.Priority)}}</span>
+    <span class="status-badge status-{{if eq .Ticket.Status "resolved"}}active{{else if eq .Ticket.Status "closed"}}disabled{{else}}active{{end}}" style="margin-left:8px;">{{t .Lang (print "servicedesk.status." .Ticket.Status)}}</span>
+    <span class="cell-muted" style="margin-left:8px;">{{topicLabel .Lang .Ticket.Topic}}</span>
+  </p>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-head"><span class="panel-title">{{t .Lang "servicedesk.form_description"}}</span></div>
+    <p style="font-size:13.5px;color:var(--text);white-space:pre-wrap;line-height:1.6;">{{if .Ticket.Description}}{{.Ticket.Description}}{{else}}—{{end}}</p>
+    {{$byComment := ticketAttachmentsByComment .Attachments}}
+    {{$ticketFiles := index $byComment 0}}
+    {{if $ticketFiles}}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+      {{range $ticketFiles}}
+      <a href="/portal/tickets/{{$.Ticket.ID}}/attachments/{{.ID}}" class="access-badge" style="text-decoration:none;">{{icon "folder" 13}}{{.OriginalName}}</a>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+
+  <div class="panel" style="padding:22px;">
+    <div class="panel-title" style="margin-bottom:16px;">{{t .Lang "ticket.comments_title"}}</div>
+
+    {{if not .Comments}}
+    <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "ticket.no_comments"}}</p>
+    {{else}}
+    {{$byComment2 := ticketAttachmentsByComment .Attachments}}
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px;">
+      {{range .Comments}}
+      <div style="display:flex;gap:12px;">
+        <div class="avatar avatar-sm">{{initials .AuthorName}}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
+            <span style="font-size:12.5px;font-weight:500;color:var(--text);">{{.AuthorName}}</span>
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);">{{.CreatedAt.Format "Jan 2, 15:04"}}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">{{.Body}}</div>
+          {{$files := index $byComment2 .ID}}
+          {{if $files}}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+            {{range $files}}
+            <a href="/portal/tickets/{{$.Ticket.ID}}/attachments/{{.ID}}" class="access-badge" style="text-decoration:none;">{{icon "folder" 13}}{{.OriginalName}}</a>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+
+    <form method="post" action="/portal/tickets/{{.Ticket.ID}}/comments" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <textarea name="body" class="input input-plain" style="width:100%;min-height:70px;" placeholder="{{t .Lang "ticket.comment_placeholder"}}" required></textarea>
+      <input class="input input-plain" type="file" name="attachment" style="margin-top:8px;">
+      <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{t .Lang "ticket.comment_submit"}}</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+{{end}}
