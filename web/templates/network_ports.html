@@ -18,7 +18,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">{{t .Lang "nav.ports"}}</h1>
-        <p class="page-sub">{{t .Lang "ports.subtitle"}}</p>
+        <p class="page-sub">{{t .Lang "ports.subtitle"}}{{if .Backend}} · {{.Backend}}{{end}}</p>
       </div>
     </div>
 
@@ -44,9 +44,45 @@
     {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
 
     {{if .Backend}}
-    <div class="panel" style="padding:22px;margin-bottom:16px;">
-      <form method="post" action="/network/ports/open" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
-        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    {{$lang := .Lang}}
+    {{$csrf := .CSRFToken}}
+    {{$open := .OpenSet}}
+
+    <!-- Standard ports quick-list, grouped + searchable -->
+    <div class="panel" style="padding:20px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "ports.common_title"}}</span></div>
+      <input class="input input-plain" type="text" id="port-search" placeholder="{{t .Lang "ports.search_placeholder"}}" style="width:100%;margin-bottom:14px;">
+      <div id="common-ports-groups">
+        {{range .CommonGroups}}
+        <div class="common-port-group" data-group="{{.Name}}">
+          <div class="cell-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;">{{.Name}}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            {{range .Ports}}
+            {{$key := printf "%s:%d" .Proto .Port}}
+            <div class="common-port-item" data-name="{{.Name}}" data-port="{{.Port}}">
+              {{if index $open $key}}
+              <span class="access-badge" style="background:rgba(61,214,140,0.12);border-color:rgba(61,214,140,0.3);">{{icon "check" 13}}{{.Name}} · {{.Port}}/{{.Proto}}</span>
+              {{else}}
+              <form method="post" action="/network/ports/open" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{$csrf}}">
+                <input type="hidden" name="port" value="{{.Port}}">
+                <input type="hidden" name="proto" value="{{.Proto}}">
+                <input type="hidden" name="description" value="{{.Name}}">
+                <button type="submit" class="access-badge" style="cursor:pointer;border:1px solid var(--border);background:var(--panel-2);">{{.Name}} · {{.Port}}/{{.Proto}}</button>
+              </form>
+              {{end}}
+            </div>
+            {{end}}
+          </div>
+        </div>
+        {{end}}
+      </div>
+    </div>
+
+    <!-- Custom port -->
+    <div class="panel" style="padding:20px;margin-bottom:16px;">
+      <form method="post" action="/network/ports/open" class="form-grid" style="grid-template-columns:1fr 1fr 1.4fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{$csrf}}">
         <div>
           <label class="field-label">{{t .Lang "ports.form_port"}}</label>
           <input class="input input-plain" type="number" name="port" min="1" max="65535" required>
@@ -58,29 +94,104 @@
             <option value="udp">UDP</option>
           </select>
         </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_description"}}</label>
+          <input class="input input-plain" type="text" name="description">
+        </div>
         <button type="submit" class="btn btn-primary">{{icon "plus" 15}}{{t .Lang "ports.open_button"}}</button>
       </form>
     </div>
 
-    <div class="panel table-panel">
-      {{if not .Rules}}
-      <div class="empty-inline">{{icon "toggles" 26}}<p>{{t .Lang "ports.empty"}}</p></div>
-      {{else}}
-      <div class="accounts-row accounts-row-head" style="grid-template-columns:1fr 1fr 1fr;">
-        <span class="table-head">{{t .Lang "ports.table_port"}}</span>
-        <span class="table-head">{{t .Lang "ports.table_proto"}}</span>
-        <span></span>
+    <!-- Open ports: toggle switches + bulk disable -->
+    <form method="post" action="/network/ports/close-many">
+      <input type="hidden" name="csrf_token" value="{{$csrf}}">
+      <div class="panel table-panel">
+        {{if not .Rules}}
+        <div class="empty-inline">{{icon "toggles" 26}}<p>{{t .Lang "ports.empty"}}</p></div>
+        {{else}}
+        <div class="accounts-row accounts-row-head" style="grid-template-columns:0.5fr 0.7fr 0.7fr 1.6fr 0.9fr 0.8fr;">
+          <span class="table-head"><input type="checkbox" id="select-all-ports"></span>
+          <span class="table-head">{{t .Lang "ports.table_port"}}</span>
+          <span class="table-head">{{t .Lang "ports.table_proto"}}</span>
+          <span class="table-head">{{t .Lang "ports.table_description"}}</span>
+          <span class="table-head">{{t .Lang "software.installed"}}</span>
+          <span></span>
+        </div>
+        {{range .Rules}}
+        {{$key := printf "%s:%d" .Proto .Port}}
+        <div class="accounts-row" style="grid-template-columns:0.5fr 0.7fr 0.7fr 1.6fr 0.9fr 0.8fr;">
+          <span><input type="checkbox" name="ports" value="{{$key}}" class="port-row-check"></span>
+          <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Port}}</span>
+          <span class="cell-muted">{{.Proto}}</span>
+          <span class="cell-muted">
+            <form method="post" action="/network/ports/label" style="display:flex;gap:6px;margin:0;" onsubmit="return true;">
+              <input type="hidden" name="csrf_token" value="{{$csrf}}">
+              <input type="hidden" name="port" value="{{.Port}}">
+              <input type="hidden" name="proto" value="{{.Proto}}">
+              <input class="input input-plain" type="text" name="description" value="{{index $.Labels $key}}" placeholder="{{t $lang "ports.form_description"}}" style="padding:4px 8px;font-size:12px;">
+              <button type="submit" class="link-action" style="padding:0 6px;">{{icon "check" 12}}</button>
+            </form>
+          </span>
+          <span class="status-icon on">{{icon "check" 13}}{{t $lang "ports.status_on"}}</span>
+          <span class="row-actions">
+            <label class="toggle-switch" title="{{t $lang "ports.close_button"}}">
+              <input type="checkbox" checked onchange="closePort('{{.Proto}}', {{.Port}})">
+              <span class="toggle-track"></span>
+            </label>
+          </span>
+        </div>
+        {{end}}
+        <div style="padding:12px 16px;display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn" style="padding:7px 16px;">{{icon "trash" 13}}{{t .Lang "ports.close_selected"}}</button>
+        </div>
+        {{end}}
       </div>
-      {{range .Rules}}
-      <div class="accounts-row" style="grid-template-columns:1fr 1fr 1fr;">
-        <span style="font-size:13.5px;color:var(--text);font-family:var(--font-mono);">{{.Port}}</span>
-        <span class="cell-muted">{{.Proto}}</span>
+    </form>
+
+    <!-- Port forwarding -->
+    <div class="panel" style="padding:20px;margin-top:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "ports.forwarding_title"}}</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">{{t .Lang "ports.forwarding_subtitle"}}</p>
+      <form method="post" action="/network/ports/forwards" class="form-grid" style="grid-template-columns:0.8fr 0.6fr 1fr 0.8fr 1fr auto;align-items:end;margin-bottom:16px;">
+        <input type="hidden" name="csrf_token" value="{{$csrf}}">
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_external"}}</label>
+          <input class="input input-plain" type="number" name="external_port" min="1" max="65535" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_proto"}}</label>
+          <select class="input input-plain" name="external_proto">
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_internal_ip"}}</label>
+          <input class="input input-plain" type="text" name="internal_ip" placeholder="10.0.0.5" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_internal_port"}}</label>
+          <input class="input input-plain" type="number" name="internal_port" min="1" max="65535" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "ports.form_description"}}</label>
+          <input class="input input-plain" type="text" name="description">
+        </div>
+        <button type="submit" class="btn btn-primary">{{t .Lang "ports.add_forward_button"}}</button>
+      </form>
+
+      {{if not .Forwards}}
+      <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "ports.forwards_empty"}}</p>
+      {{else}}
+      {{range .Forwards}}
+      <div class="accounts-row" style="grid-template-columns:2.2fr 1.4fr auto;">
+        <span style="font-size:13px;color:var(--text);font-family:var(--font-mono);">{{.ExternalPort}}/{{.ExternalProto}} → {{.InternalIP}}:{{.InternalPort}}</span>
+        <span class="cell-muted">{{.Description}}</span>
         <span class="row-actions">
-          <form method="post" action="/network/ports/close">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <input type="hidden" name="port" value="{{.Port}}">
-            <input type="hidden" name="proto" value="{{.Proto}}">
-            <button type="submit" class="link-action link-danger">{{t $.Lang "ports.close_button"}}</button>
+          <form method="post" action="/network/ports/forwards/delete">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input type="hidden" name="id" value="{{.ID}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
           </form>
         </span>
       </div>
@@ -91,6 +202,48 @@
 
   </div>
 </div>
+<script>
+  (function () {
+    var closeForm = document.createElement("form");
+    closeForm.method = "post";
+    closeForm.action = "/network/ports/close";
+    closeForm.style.display = "none";
+    var csrfInput = document.createElement("input");
+    csrfInput.type = "hidden"; csrfInput.name = "csrf_token"; csrfInput.value = "{{.CSRFToken}}";
+    var portInput = document.createElement("input"); portInput.type = "hidden"; portInput.name = "port";
+    var protoInput = document.createElement("input"); protoInput.type = "hidden"; protoInput.name = "proto";
+    closeForm.appendChild(csrfInput); closeForm.appendChild(portInput); closeForm.appendChild(protoInput);
+    document.body.appendChild(closeForm);
+    window.closePort = function (proto, port) {
+      if (!confirm("{{t .Lang "ports.close_button"}}: " + port + "/" + proto + "?")) { return; }
+      protoInput.value = proto; portInput.value = port;
+      closeForm.submit();
+    };
+
+    var selectAll = document.getElementById("select-all-ports");
+    if (selectAll) {
+      selectAll.addEventListener("change", function () {
+        document.querySelectorAll(".port-row-check").forEach(function (cb) { cb.checked = selectAll.checked; });
+      });
+    }
+
+    var search = document.getElementById("port-search");
+    if (search) {
+      search.addEventListener("input", function () {
+        var q = search.value.trim().toLowerCase();
+        document.querySelectorAll(".common-port-item").forEach(function (item) {
+          var name = (item.dataset.name || "").toLowerCase();
+          var port = item.dataset.port || "";
+          item.style.display = (!q || name.indexOf(q) !== -1 || port.indexOf(q) !== -1) ? "" : "none";
+        });
+        document.querySelectorAll(".common-port-group").forEach(function (group) {
+          var anyVisible = Array.prototype.some.call(group.querySelectorAll(".common-port-item"), function (i) { return i.style.display !== "none"; });
+          group.style.display = anyVisible ? "" : "none";
+        });
+      });
+    }
+  })();
+</script>
 </body>
 </html>
 {{end}}

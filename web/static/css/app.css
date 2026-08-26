@@ -462,6 +462,28 @@ button { font-family: inherit; }
 }
 .access-badge svg { color: var(--accent); flex-shrink: 0; }
 
+/* iOS-style on/off toggle — a checkbox underneath, styled as a pill +
+   thumb. Used for "this port is open" rows where flipping it off is a
+   real action (submits the row's own close form), not just decoration. */
+.toggle-switch { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch .toggle-track {
+  position: absolute; inset: 0; background: var(--border); border-radius: 999px;
+  cursor: pointer; transition: background 0.15s ease;
+}
+.toggle-switch .toggle-track::before {
+  content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
+  background: var(--paper, #fff); border-radius: 50%; transition: transform 0.15s ease;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--good); }
+.toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+
+/* small enabled/disabled status dot + icon pairing, used next to a
+   toggle for an at-a-glance state beyond just the switch position */
+.status-icon { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; }
+.status-icon.on { color: var(--good); }
+.status-icon.off { color: var(--muted); }
+
 /* ---------- organization (departments & positions) ---------- */
 
 .inline-add-form { display: flex; gap: 10px; margin-bottom: 16px; }
