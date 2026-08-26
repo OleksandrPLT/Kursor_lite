@@ -74,6 +74,7 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 
 	r.Group(func(r chi.Router) {
 		r.Use(s.requireAuth)
+		r.Use(s.auditLog)
 
 		r.Get("/", s.handleDashboard)
 
@@ -164,7 +165,11 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 			r.Post("/network/vpn/peers", s.handleVPNPeerCreate)
 			r.Post("/network/vpn/peers/{id}/toggle", s.handleVPNPeerToggle)
 			r.Post("/network/vpn/peers/{id}/delete", s.handleVPNPeerDelete)
-			r.Get("/network/ssh", s.handlePlaceholder("network-ssh", "placeholder.ssh.title", "placeholder.ssh.desc"))
+			r.Get("/network/ssh", s.handleSSHPage)
+			r.Post("/network/ssh/keys", s.handleSSHKeyAdd)
+			r.Post("/network/ssh/keys/delete", s.handleSSHKeyDelete)
+			r.Post("/network/ssh/port", s.handleSSHPortUpdate)
+			r.Post("/network/ssh/password-auth", s.handleSSHPasswordAuthUpdate)
 		})
 
 		r.Get("/monitor/stream", s.monitor.ServeStream)
@@ -179,12 +184,20 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 		r.Post("/company/servicedesk", s.handleTicketCreate)
 		r.Get("/company/servicedesk/{id}", s.handleTicketPage)
 		r.Post("/company/servicedesk/{id}/status", s.handleTicketStatus)
+		r.Post("/company/servicedesk/{id}/group", s.handleTicketSetGroup)
+		r.Post("/company/servicedesk/{id}/escalate", s.handleTicketEscalate)
 		r.Post("/company/servicedesk/{id}/assign-me", s.handleTicketAssignToMe)
 		r.Post("/company/servicedesk/{id}/assign", s.handleTicketAssign)
 		r.Post("/company/servicedesk/{id}/create-account", s.handleTicketCreateAccount)
 		r.Post("/company/servicedesk/{id}/grant-access", s.handleTicketGrantAccess)
 		r.Post("/company/servicedesk/{id}/terminate-target", s.handleTicketTerminateTarget)
 		r.Post("/company/servicedesk/{id}/comments", s.handleTicketComment)
+
+		// Notifications: every logged-in user has their own — not gated
+		// by any module permission, same reasoning as Service Desk above.
+		r.Get("/system/notifications", s.handleNotificationsPage)
+		r.Get("/system/notifications/open", s.handleNotificationRead)
+		r.Post("/system/notifications/mark-all-read", s.handleNotificationsMarkAllRead)
 
 		r.Get("/accounts/{id}/avatar", s.handleAccountAvatar)
 
@@ -226,10 +239,12 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 			r.Get("/company/approvals", s.handleApprovalsPage)
 			r.Post("/company/servicedesk/{id}/approval", s.handleTicketApproval)
 
-			r.Get("/system/audit-log", s.handlePlaceholder("system-audit", "placeholder.audit.title", "placeholder.audit.desc"))
-			r.Get("/system/notifications", s.handlePlaceholder("system-notifications", "placeholder.notifications.title", "placeholder.notifications.desc"))
-			r.Get("/system/updates", s.handlePlaceholder("system-updates", "placeholder.updates.title", "placeholder.updates.desc"))
-			r.Get("/system/api-keys", s.handlePlaceholder("system-api-keys", "placeholder.api_keys.title", "placeholder.api_keys.desc"))
+			r.Get("/system/audit-log", s.handleAuditLogPage)
+			r.Get("/system/updates", s.handleUpdatesPage)
+			// API keys live under Integrations now (see internal/server/integrations.go) — redirect the old nav slot rather than 404 anyone with it bookmarked.
+			r.Get("/system/api-keys", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "/company/integrations", http.StatusMovedPermanently)
+			})
 		})
 	})
 

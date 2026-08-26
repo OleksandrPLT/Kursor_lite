@@ -60,12 +60,13 @@ type ProfileData struct {
 // AccountEditData backs the edit-account page.
 type AccountEditData struct {
 	PageData
-	Account      store.User
-	Departments  []store.Department
-	Positions    []store.Position
-	SelectedPerm map[string]bool
-	NewPassword  string
-	FormErrorKey string
+	Account       store.User
+	Departments   []store.Department
+	Positions     []store.Position
+	SupportGroups []store.SupportGroup
+	SelectedPerm  map[string]bool
+	NewPassword   string
+	FormErrorKey  string
 }
 
 func (s *Server) handleAccountsPage(w http.ResponseWriter, r *http.Request) {
@@ -281,6 +282,7 @@ func (s *Server) handleAccountEditPage(w http.ResponseWriter, r *http.Request) {
 	}
 	departments, _ := s.store.ListDepartments()
 	positions, _ := s.store.ListPositions()
+	supportGroups, _ := s.store.ListSupportGroups()
 
 	selected := map[string]bool{}
 	for _, p := range account.PermissionsList() {
@@ -288,11 +290,12 @@ func (s *Server) handleAccountEditPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.render(w, "account_edit", AccountEditData{
-		PageData:     s.basePageData(w, r, "accounts", sess),
-		Account:      *account,
-		Departments:  departments,
-		Positions:    positions,
-		SelectedPerm: selected,
+		PageData:      s.basePageData(w, r, "accounts", sess),
+		Account:       *account,
+		Departments:   departments,
+		Positions:     positions,
+		SupportGroups: supportGroups,
+		SelectedPerm:  selected,
 	})
 }
 
@@ -314,17 +317,19 @@ func (s *Server) handleAccountEditSubmit(w http.ResponseWriter, r *http.Request)
 	renderWithError := func(key string) {
 		departments, _ := s.store.ListDepartments()
 		positions, _ := s.store.ListPositions()
+		supportGroups, _ := s.store.ListSupportGroups()
 		selected := map[string]bool{}
 		for _, p := range account.PermissionsList() {
 			selected[p] = true
 		}
 		s.render(w, "account_edit", AccountEditData{
-			PageData:     s.basePageData(w, r, "accounts", sess),
-			Account:      *account,
-			Departments:  departments,
-			Positions:    positions,
-			SelectedPerm: selected,
-			FormErrorKey: key,
+			PageData:      s.basePageData(w, r, "accounts", sess),
+			Account:       *account,
+			Departments:   departments,
+			Positions:     positions,
+			SupportGroups: supportGroups,
+			SelectedPerm:  selected,
+			FormErrorKey:  key,
 		})
 	}
 
@@ -351,18 +356,21 @@ func (s *Server) handleAccountEditSubmit(w http.ResponseWriter, r *http.Request)
 	}
 
 	err = s.store.UpdateProfile(id, store.ProfileUpdate{
-		LastName:     r.FormValue("last_name"),
-		FirstName:    r.FormValue("first_name"),
-		Patronymic:   r.FormValue("patronymic"),
-		JobTitle:     r.FormValue("job_title"),
-		Phone:        r.FormValue("phone"),
-		Email:        r.FormValue("email"),
-		HiredAt:      r.FormValue("hired_at"),
-		TerminatedAt: r.FormValue("terminated_at"),
-		Role:         role,
-		Permissions:  parsePermissions(r.Form["permissions"]),
-		DepartmentID: parseOptionalID(r.FormValue("department_id")),
-		PositionID:   parseOptionalID(r.FormValue("position_id")),
+		LastName:       r.FormValue("last_name"),
+		FirstName:      r.FormValue("first_name"),
+		Patronymic:     r.FormValue("patronymic"),
+		JobTitle:       r.FormValue("job_title"),
+		Phone:          r.FormValue("phone"),
+		Email:          r.FormValue("email"),
+		HiredAt:        r.FormValue("hired_at"),
+		TerminatedAt:   r.FormValue("terminated_at"),
+		Role:           role,
+		Permissions:    parsePermissions(r.Form["permissions"]),
+		DepartmentID:   parseOptionalID(r.FormValue("department_id")),
+		PositionID:     parseOptionalID(r.FormValue("position_id")),
+		SupportGroupID: parseOptionalID(r.FormValue("support_group_id")),
+		Extension:      r.FormValue("extension"),
+		ContractNumber: r.FormValue("contract_number"),
 	})
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)

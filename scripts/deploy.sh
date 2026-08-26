@@ -43,7 +43,8 @@ BUILD_DIR="$(mktemp -d)"
 trap 'rm -rf "$BUILD_DIR"' EXIT
 
 log "building kursord for ${GOOS}/${GOARCH} ..."
-GOOS="$GOOS" GOARCH="$GOARCH" go build -o "${BUILD_DIR}/kursord" ./cmd/kursord
+GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
+GOOS="$GOOS" GOARCH="$GOARCH" go build -ldflags "-X kursor/internal/version.GitCommit=${GIT_COMMIT}" -o "${BUILD_DIR}/kursord" ./cmd/kursord
 log "build ok ($(du -h "${BUILD_DIR}/kursord" | cut -f1))"
 
 log "uploading to ${TARGET}:${REMOTE_TMP}"

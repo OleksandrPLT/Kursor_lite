@@ -97,7 +97,8 @@ log "using $(go version)"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 BUILD_DIR="$(mktemp -d)"
-spin "building kursord" go build -o "${BUILD_DIR}/kursord" ./cmd/kursord
+GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
+spin "building kursord" go build -ldflags "-X kursor/internal/version.GitCommit=${GIT_COMMIT}" -o "${BUILD_DIR}/kursord" ./cmd/kursord
 
 # --- 3. Install files --------------------------------------------------
 spin "creating directories" mkdir -p "${INSTALL_DIR}/bin" "$DATA_DIR" "$WWW_ROOT" "$LOG_DIR"

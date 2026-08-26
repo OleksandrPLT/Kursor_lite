@@ -173,6 +173,12 @@ type User struct {
 	PositionID     *int64
 	DepartmentName string // "" if unset; "Parent / Child" if the department has a parent
 	PositionName   string // "" if unset
+
+	SupportGroupID   *int64
+	SupportGroupName string // "" if unset
+
+	Extension      string // internal phone extension, e.g. "104"
+	ContractNumber string // "" if unset
 }
 
 // PermissionsList splits the stored comma-separated permissions into a
@@ -281,28 +287,33 @@ func (s *Store) CreateUser(u NewUser) (int64, error) {
 // (everything except username, which stays immutable, and password,
 // which goes through ResetPassword instead).
 type ProfileUpdate struct {
-	LastName     string
-	FirstName    string
-	Patronymic   string
-	JobTitle     string
-	Phone        string
-	Email        string
-	HiredAt      string
-	TerminatedAt string
-	Role         string
-	Permissions  string
-	DepartmentID *int64
-	PositionID   *int64
+	LastName       string
+	FirstName      string
+	Patronymic     string
+	JobTitle       string
+	Phone          string
+	Email          string
+	HiredAt        string
+	TerminatedAt   string
+	Role           string
+	Permissions    string
+	DepartmentID   *int64
+	PositionID     *int64
+	SupportGroupID *int64
+	Extension      string
+	ContractNumber string
 }
 
 // UpdateProfile overwrites an account's editable fields.
 func (s *Store) UpdateProfile(id int64, u ProfileUpdate) error {
 	_, err := s.db.Exec(`UPDATE users SET
 		last_name = ?, first_name = ?, patronymic = ?, job_title = ?, phone = ?, email = ?,
-		hired_at = ?, terminated_at = ?, role = ?, permissions = ?, department_id = ?, position_id = ?, updated_at = ?
+		hired_at = ?, terminated_at = ?, role = ?, permissions = ?, department_id = ?, position_id = ?,
+		support_group_id = ?, extension = ?, contract_number = ?, updated_at = ?
 		WHERE id = ?`,
 		u.LastName, u.FirstName, u.Patronymic, u.JobTitle, u.Phone, u.Email,
 		u.HiredAt, u.TerminatedAt, u.Role, u.Permissions, u.DepartmentID, u.PositionID,
+		u.SupportGroupID, u.Extension, u.ContractNumber,
 		time.Now().UTC().Format(time.RFC3339), id)
 	return err
 }
@@ -329,22 +340,24 @@ const userSelect = `u.id, u.username, u.password_hash, u.full_name, u.email, u.r
 	u.last_name, u.first_name, u.patronymic, u.job_title, u.phone, u.hired_at, u.terminated_at, u.avatar_mime,
 	(u.avatar IS NOT NULL AND length(u.avatar) > 0), u.permissions, u.department_id, u.position_id,
 	CASE WHEN d.id IS NULL THEN '' WHEN pd.id IS NULL THEN d.name ELSE pd.name || ' / ' || d.name END,
-	COALESCE(p.name, '')`
+	COALESCE(p.name, ''), u.support_group_id, COALESCE(sg.name, ''), u.extension, u.contract_number`
 
 const userFrom = `FROM users u
 	LEFT JOIN departments d ON d.id = u.department_id
 	LEFT JOIN departments pd ON pd.id = d.parent_id
-	LEFT JOIN positions p ON p.id = u.position_id`
+	LEFT JOIN positions p ON p.id = u.position_id
+	LEFT JOIN support_groups sg ON sg.id = u.support_group_id`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
-	var departmentID, positionID sql.NullInt64
+	var departmentID, positionID, supportGroupID sql.NullInt64
 	var createdAt string
 	var hasAvatar int
 	if err := row.Scan(
 		&u.ID, &u.Username, &u.PasswordHash, &u.FullName, &u.Email, &u.Role, &u.Status, &createdAt,
 		&u.LastName, &u.FirstName, &u.Patronymic, &u.JobTitle, &u.Phone, &u.HiredAt, &u.TerminatedAt, &u.AvatarMime,
 		&hasAvatar, &u.Permissions, &departmentID, &positionID, &u.DepartmentName, &u.PositionName,
+		&supportGroupID, &u.SupportGroupName, &u.Extension, &u.ContractNumber,
 	); err != nil {
 		return nil, err
 	}
@@ -359,6 +372,10 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	if positionID.Valid {
 		v := positionID.Int64
 		u.PositionID = &v
+	}
+	if supportGroupID.Valid {
+		v := supportGroupID.Int64
+		u.SupportGroupID = &v
 	}
 	return &u, nil
 }

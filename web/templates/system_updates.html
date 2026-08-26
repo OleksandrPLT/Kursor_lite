@@ -1,0 +1,73 @@
+{{define "system_updates"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.updates"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.updates"}}</h1>
+        <p class="page-sub">{{t .Lang "updates.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if .CheckError}}
+    <div class="error-banner">{{t .Lang "updates.check_error"}} {{.CheckError}}</div>
+    {{else}}
+      {{if eq .RunningCommit "dev"}}
+      <div class="error-banner" style="background:rgba(255,138,61,0.10);border-color:rgba(255,138,61,0.35);color:#ffb37a;">{{t .Lang "updates.dev_build_note"}}</div>
+      {{else if .UpdateAvailable}}
+      <div class="created-banner">
+        <div class="created-banner-title">{{icon "refresh" 15}} {{t .Lang "updates.available"}}</div>
+      </div>
+      {{else}}
+      <div class="panel" style="padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+        {{icon "check" 18}}<span style="font-size:13.5px;color:var(--text);">{{t .Lang "updates.up_to_date"}}</span>
+      </div>
+      {{end}}
+
+      <div class="info-chips" style="margin-bottom:16px;">
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "updates.running_title"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{.RunningCommit}}</span></div>
+        <div class="info-chip">
+          <span class="info-chip-label">{{t .Lang "updates.latest_title"}}</span>
+          <span class="info-chip-value" style="font-family:var(--font-mono);">
+            {{if .Latest.URL}}<a href="{{.Latest.URL}}" target="_blank" rel="noopener" style="color:var(--accent);">{{.Latest.ShortSHA}}</a>{{else}}{{.Latest.ShortSHA}}{{end}}
+          </span>
+        </div>
+      </div>
+      {{if .Latest.Message}}
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">{{.Latest.Message}} {{if not .Latest.Date.IsZero}}· {{.Latest.Date.Format "Jan 2, 2006 15:04"}}{{end}}</p>
+      {{end}}
+    {{end}}
+
+    <div class="panel" style="padding:20px;">
+      <div class="panel-title" style="margin-bottom:14px;">{{t .Lang "updates.how_to_title"}}</div>
+
+      <div style="margin-bottom:16px;">
+        <div class="field-label" style="margin-bottom:6px;">{{t .Lang "updates.how_to_server"}}</div>
+        <pre class="input input-plain" style="font-family:var(--font-mono);font-size:12px;">cd Kursor_lite
+sudo ./scripts/update.sh</pre>
+      </div>
+
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">{{t .Lang "updates.how_to_local"}}</div>
+        <pre class="input input-plain" style="font-family:var(--font-mono);font-size:12px;">./scripts/deploy.sh root@your-server-ip</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -11,7 +11,33 @@
       <a href="/lang/en" class="lang-flag{{if eq .Lang "en"}} active{{end}}" title="English">🇬🇧</a>
     </div>
     <div class="vdivider"></div>
-    <div class="icon-btn">{{icon "bell" 16}}<span class="dot"></span></div>
+    <details class="notif-bell">
+      <summary class="icon-btn">{{icon "bell" 16}}{{if gt .UnreadNotifications 0}}<span class="dot"></span>{{end}}</summary>
+      <div class="notif-dropdown">
+        <div class="notif-dropdown-head">
+          <span>{{t .Lang "notif.title"}}</span>
+          {{if gt .UnreadNotifications 0}}
+          <form method="post" action="/system/notifications/mark-all-read" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="link-action" style="font-size:11px;">{{t .Lang "notif.mark_all_read"}}</button>
+          </form>
+          {{end}}
+        </div>
+        {{if not .RecentNotifications}}
+        <p style="font-size:12px;color:var(--muted);padding:14px 16px;">{{t .Lang "notif.empty"}}</p>
+        {{else}}
+        {{$lang := .Lang}}
+        {{range .RecentNotifications}}
+        <a href="/system/notifications/open?id={{.ID}}&link={{.Link}}" class="notif-item{{if not .ReadAt}} unread{{end}}">
+          <span class="notif-item-title">{{.Title}}</span>
+          <span class="notif-item-body">{{.Body}}</span>
+          <span class="notif-item-time">{{.CreatedAt.Format "Jan 2, 15:04"}}</span>
+        </a>
+        {{end}}
+        {{end}}
+        <a href="/system/notifications" class="notif-dropdown-footer">{{t .Lang "notif.view_all"}}</a>
+      </div>
+    </details>
     <div class="vdivider"></div>
     <div class="account">
       <div class="avatar">{{.UserInitials}}</div>

@@ -28,7 +28,7 @@
     {{if not .NginxStatus.Ready}}
       <div class="error-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
         <span>{{t .Lang "sites.not_detected"}}</span>
-        <form method="post" action="/sites/install-nginx" style="margin:0;">
+        <form method="post" action="/sites/install-nginx" class="js-install-form" style="margin:0;">
           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
           <button type="submit" class="btn" style="white-space:nowrap;">{{icon "download" 14}}{{t .Lang "sites.install_button"}}</button>
         </form>
@@ -84,6 +84,7 @@
 
   </div>
 </div>
+<script src="/static/js/install-forms.js"></script>
 </body>
 </html>
 {{end}}

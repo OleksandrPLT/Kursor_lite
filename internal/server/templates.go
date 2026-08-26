@@ -62,6 +62,9 @@ type PageData struct {
 	OS           string
 	CPUCores     int
 	NetIface     string
+
+	UnreadNotifications int
+	RecentNotifications []store.Notification
 }
 
 // LoginData is what the login page template needs. ErrorKey (rather than
@@ -90,7 +93,7 @@ func (s *Server) basePageData(w http.ResponseWriter, r *http.Request, active str
 		username, role = sess.Username, sess.Role
 		can = sess.HasModule
 	}
-	return PageData{
+	data := PageData{
 		Lang:         getLang(r),
 		Active:       active,
 		Username:     username,
@@ -110,6 +113,11 @@ func (s *Server) basePageData(w http.ResponseWriter, r *http.Request, active str
 		CPUCores:     h.CPUCores,
 		NetIface:     "all interfaces",
 	}
+	if sess != nil {
+		data.UnreadNotifications, _ = s.store.CountUnreadNotifications(sess.UserID)
+		data.RecentNotifications, _ = s.store.ListNotifications(sess.UserID, 8)
+	}
+	return data
 }
 
 // userInitials takes the first RUNE (not byte — Cyrillic names are a

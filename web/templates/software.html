@@ -42,7 +42,7 @@
           {{if .Installed}}
           <span class="status-badge status-active">{{t $lang "software.installed"}}</span>
           {{else}}
-          <form method="post" action="/server/software/install">
+          <form method="post" action="/server/software/install" class="js-install-form">
             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
             <input type="hidden" name="key" value="{{.Key}}">
             <button type="submit" class="btn" style="padding:6px 14px;">{{icon "download" 13}}{{t $lang "software.install_button"}}</button>
@@ -57,6 +57,7 @@
 
   </div>
 </div>
+<script src="/static/js/install-forms.js"></script>
 </body>
 </html>
 {{end}}

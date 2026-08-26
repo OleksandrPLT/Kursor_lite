@@ -84,6 +84,12 @@ type Ticket struct {
 	// so a repeat click (or a slow double-submit) can never re-run it.
 	ActionApplied   bool
 	ActionAppliedAt *time.Time
+
+	// SupportGroupID is which access tier currently owns this ticket —
+	// nil until an agent sets it or escalates (see server/servicedesk.go
+	// handleTicketEscalate).
+	SupportGroupID   *int64
+	SupportGroupName string
 }
 
 // RequestedPermissionsList splits RequestedPermissions, skipping blanks.
@@ -151,17 +157,18 @@ const ticketSelect = `t.id, t.title, t.description, t.type, t.topic, t.reason, t
 	t.new_last_name, t.new_first_name, t.new_patronymic, t.new_email, t.new_phone, t.new_hired_at,
 	t.new_department_id, t.new_position_id, t.requested_permissions,
 	t.requires_approval, t.approval_status, t.approved_by, COALESCE(ab.username, ''), t.approved_at,
-	t.created_account_id, t.action_applied_at`
+	t.created_account_id, t.action_applied_at, t.support_group_id, COALESCE(sg.name, '')`
 
 const ticketFrom = `FROM tickets t
 	JOIN users ru ON ru.id = t.requester_id
 	LEFT JOIN users au ON au.id = t.assignee_id
 	LEFT JOIN users tu ON tu.id = t.target_user_id
-	LEFT JOIN users ab ON ab.id = t.approved_by`
+	LEFT JOIN users ab ON ab.id = t.approved_by
+	LEFT JOIN support_groups sg ON sg.id = t.support_group_id`
 
 func scanTicket(row interface{ Scan(...any) error }) (*Ticket, error) {
 	var t Ticket
-	var assigneeID, targetUserID, newDeptID, newPosID, approvedByID, createdAccountID sql.NullInt64
+	var assigneeID, targetUserID, newDeptID, newPosID, approvedByID, createdAccountID, supportGroupID sql.NullInt64
 	var requiresApproval int
 	var dueAt, createdAt, updatedAt, resolvedAt, approvedAt, actionAppliedAt string
 	if err := row.Scan(
@@ -172,9 +179,13 @@ func scanTicket(row interface{ Scan(...any) error }) (*Ticket, error) {
 		&t.NewLastName, &t.NewFirstName, &t.NewPatronymic, &t.NewEmail, &t.NewPhone, &t.NewHiredAt,
 		&newDeptID, &newPosID, &t.RequestedPermissions,
 		&requiresApproval, &t.ApprovalStatus, &approvedByID, &t.ApprovedByName, &approvedAt,
-		&createdAccountID, &actionAppliedAt,
+		&createdAccountID, &actionAppliedAt, &supportGroupID, &t.SupportGroupName,
 	); err != nil {
 		return nil, err
+	}
+	if supportGroupID.Valid {
+		v := supportGroupID.Int64
+		t.SupportGroupID = &v
 	}
 	if assigneeID.Valid {
 		v := assigneeID.Int64

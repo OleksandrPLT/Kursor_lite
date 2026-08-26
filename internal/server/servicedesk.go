@@ -37,6 +37,13 @@ var ticketTopics = []struct{ Key, LabelKey string }{
 	{"other", "servicedesk.topic.other"},
 }
 
+// notifLang is fixed rather than the acting user's own language cookie
+// (getLang(r)) — a notification is generated for a *different* user,
+// whose language preference this request has no way to know (Kursor
+// only tracks a per-browser cookie, not a stored per-account
+// preference). Ukrainian, matching the product's primary language.
+const notifLang = "uk"
+
 func isValidTopic(topic string) bool {
 	for _, t := range ticketTopics {
 		if t.Key == topic {
@@ -230,19 +237,49 @@ func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	if nt.RequestKind != "" {
+		// Only the three request-kind workflows ever set requires_approval
+		// (see store.CreateTicket) — a plain ticket never needs this.
+		if ticket, err := s.store.GetTicket(id); err == nil && ticket != nil && ticket.RequiresApproval {
+			s.notifyAdmins("approval_needed", i18n.T(notifLang, "notif.approval_needed_title"), ticket.Title, "/company/servicedesk/"+strconv.FormatInt(id, 10))
+		}
+	}
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+}
+
+// notifyUser records one notification for a single user — every
+// ticket-workflow trigger below funnels through this, so "who gets
+// notified about what" stays in one place.
+func (s *Server) notifyUser(userID int64, kind, title, body, link string) {
+	_ = s.store.CreateNotification(userID, kind, title, body, link)
+}
+
+// notifyAdmins fans a notification out to every admin — used for the
+// one notification that isn't about a specific person (a new request
+// needs *someone's* sign-off, not a particular admin's).
+func (s *Server) notifyAdmins(kind, title, body, link string) {
+	users, err := s.store.ListUsers()
+	if err != nil {
+		return
+	}
+	for _, u := range users {
+		if u.Role == "admin" {
+			s.notifyUser(u.ID, kind, title, body, link)
+		}
+	}
 }
 
 // TicketData backs the ticket detail page.
 type TicketData struct {
 	PageData
-	IsAgent      bool
-	Ticket       store.Ticket
-	Comments     []store.TicketComment
-	AllUsers     []store.User
-	NewUsername  string
-	NewPassword  string
-	FormErrorKey string
+	IsAgent       bool
+	Ticket        store.Ticket
+	Comments      []store.TicketComment
+	AllUsers      []store.User
+	SupportGroups []store.SupportGroup
+	NewUsername   string
+	NewPassword   string
+	FormErrorKey  string
 }
 
 // loadTicket fetches a ticket and enforces access: agents see
@@ -283,6 +320,7 @@ func (s *Server) handleTicketPage(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.IsAgent {
 		data.AllUsers, _ = s.store.ListUsers()
+		data.SupportGroups, _ = s.store.ListSupportGroups()
 	}
 	s.render(w, "ticket", data)
 }
@@ -302,7 +340,109 @@ func (s *Server) handleTicketStatus(w http.ResponseWriter, r *http.Request) {
 	switch status {
 	case "new", "in_progress", "resolved", "closed":
 		_ = s.store.UpdateTicketStatus(ticket.ID, status)
+		if ticket.RequesterID != sess.UserID {
+			s.notifyUser(ticket.RequesterID, "ticket_status", i18n.T(notifLang, "notif.status_changed_title"),
+				ticket.DisplayID()+" "+ticket.Title+" → "+i18n.T(notifLang, "servicedesk.status."+status),
+				"/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10))
+		}
 	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+// handleTicketSetGroup lets an agent manually assign (or clear, with an
+// empty value) which support group currently owns a ticket — the other
+// way a ticket's group changes besides escalation.
+func (s *Server) handleTicketSetGroup(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+		return
+	}
+	groupID := parseOptionalID(r.FormValue("support_group_id"))
+	_ = s.store.SetTicketSupportGroup(ticket.ID, groupID)
+	if groupID != nil {
+		s.notifyGroup(*groupID, ticket, sess.UserID)
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
+}
+
+// notifyGroup fans a notification out to every member of a support
+// group about a ticket now in their queue — used by both manual group
+// assignment and escalation.
+func (s *Server) notifyGroup(groupID int64, ticket *store.Ticket, actorID int64) {
+	members, err := s.store.ListUsersInSupportGroup(groupID)
+	if err != nil {
+		return
+	}
+	link := "/company/servicedesk/" + strconv.FormatInt(ticket.ID, 10)
+	for _, u := range members {
+		if u.ID != actorID {
+			s.notifyUser(u.ID, "ticket_assigned", i18n.T(notifLang, "notif.assigned_title"), ticket.DisplayID()+" "+ticket.Title, link)
+		}
+	}
+}
+
+// handleTicketEscalate moves a ticket to the next-higher-rank support
+// group (see store.NextSupportGroup) — a ticket with no group yet
+// escalates to the lowest-rank one (rank 0 is treated as "below every
+// real group"). Every escalation also drops a comment in the ticket's
+// own thread, so the "why did this move" trail lives right next to the
+// conversation, not just in the audit log.
+func (s *Server) handleTicketEscalate(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	ticket, err := s.loadTicket(r, sess)
+	if err != nil || ticket == nil || !isAgent(sess) {
+		http.NotFound(w, r)
+		return
+	}
+	renderErr := func(key string) {
+		comments, _ := s.store.ListTicketComments(ticket.ID)
+		updated, _ := s.store.GetTicket(ticket.ID)
+		data := TicketData{
+			PageData:     s.basePageData(w, r, "company-servicedesk", sess),
+			IsAgent:      true,
+			Ticket:       *updated,
+			Comments:     comments,
+			FormErrorKey: key,
+		}
+		data.AllUsers, _ = s.store.ListUsers()
+		data.SupportGroups, _ = s.store.ListSupportGroups()
+		s.render(w, "ticket", data)
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		renderErr("login.error.csrf")
+		return
+	}
+
+	groups, err := s.store.ListSupportGroups()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	currentRank := 0
+	if ticket.SupportGroupID != nil {
+		for _, g := range groups {
+			if g.ID == *ticket.SupportGroupID {
+				currentRank = g.Rank
+				break
+			}
+		}
+	}
+	next := store.NextSupportGroup(groups, currentRank)
+	if next == nil {
+		renderErr("servicedesk.escalate_none_higher")
+		return
+	}
+
+	_ = s.store.SetTicketSupportGroup(ticket.ID, &next.ID)
+	_ = s.store.AddTicketComment(ticket.ID, sess.UserID, i18n.T(notifLang, "servicedesk.escalated_notice")+" "+next.Name)
+	s.notifyGroup(next.ID, ticket, sess.UserID)
+
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 }
 
@@ -326,6 +466,16 @@ func (s *Server) handleTicketAssignToMe(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 }
 
+// notifyAssignment tells a newly-assigned agent about their new ticket
+// — shared by both assignment paths (assign-to-me never needs it, since
+// you obviously already know; only handleTicketAssign's search-picker
+// path does).
+func (s *Server) notifyAssignment(ticket *store.Ticket, assigneeID, actorID int64) {
+	if assigneeID != actorID {
+		s.notifyUser(assigneeID, "ticket_assigned", i18n.T(notifLang, "notif.assigned_title"), ticket.DisplayID()+" "+ticket.Title, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10))
+	}
+}
+
 // handleTicketAssign is the search-picker assignment path: an agent
 // types/picks any user (not just themselves) via the username-backed
 // <datalist> in ticket.html. The same "search a user, assign
@@ -347,6 +497,7 @@ func (s *Server) handleTicketAssign(w http.ResponseWriter, r *http.Request) {
 		_ = s.store.AssignTicket(ticket.ID, nil)
 	} else if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
 		_ = s.store.AssignTicket(ticket.ID, &user.ID)
+		s.notifyAssignment(ticket, user.ID, sess.UserID)
 	}
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 }
@@ -369,6 +520,18 @@ func (s *Server) handleTicketComment(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	if body != "" {
 		_ = s.store.AddTicketComment(ticket.ID, sess.UserID, body)
+		// Notify "the other side" of the conversation — the requester if
+		// an agent just commented, or the assignee (if any) if the
+		// requester themselves just commented. Never notify yourself.
+		title := i18n.T(notifLang, "notif.new_comment_title")
+		link := "/company/servicedesk/" + strconv.FormatInt(ticket.ID, 10)
+		if sess.UserID == ticket.RequesterID {
+			if ticket.AssigneeID != nil && *ticket.AssigneeID != sess.UserID {
+				s.notifyUser(*ticket.AssigneeID, "ticket_comment", title, ticket.DisplayID()+" "+ticket.Title, link)
+			}
+		} else if ticket.RequesterID != sess.UserID {
+			s.notifyUser(ticket.RequesterID, "ticket_comment", title, ticket.DisplayID()+" "+ticket.Title, link)
+		}
 	}
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 }

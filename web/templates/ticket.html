@@ -125,6 +125,27 @@
           <span class="profile-field-label">{{t .Lang "ticket.created"}}</span>
           <span class="profile-field-value">{{.Ticket.CreatedAt.Format "Jan 2, 2006 15:04"}}</span>
         </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "servicedesk.support_group"}}</span>
+          <span class="profile-field-value">{{if .Ticket.SupportGroupName}}{{.Ticket.SupportGroupName}}{{else}}{{t .Lang "servicedesk.no_group"}}{{end}}</span>
+        </div>
+        {{if .IsAgent}}
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/group" style="display:flex; gap:6px; flex:1;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <select class="input input-plain" name="support_group_id" style="flex:1;">
+              <option value="">{{t .Lang "servicedesk.no_group"}}</option>
+              {{$sgID := derefID .Ticket.SupportGroupID}}
+              {{range .SupportGroups}}<option value="{{.ID}}"{{if eq .ID $sgID}} selected{{end}}>{{.Name}}</option>{{end}}
+            </select>
+            <button type="submit" class="btn" style="white-space:nowrap;">{{t .Lang "servicedesk.set_group_button"}}</button>
+          </form>
+          <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/escalate">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn btn-danger" style="white-space:nowrap;">{{icon "refresh" 13}}{{t .Lang "servicedesk.escalate_button"}}</button>
+          </form>
+        </div>
+        {{end}}
         {{if .Ticket.RequiresApproval}}
         <div class="profile-field">
           <span class="profile-field-label">{{t .Lang "ticket.approval_title"}}</span>

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"kursor/internal/auth"
@@ -45,6 +46,47 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 func sessionFromContext(r *http.Request) *store.Session {
 	sess, _ := r.Context().Value(sessionContextKey).(*store.Session)
 	return sess
+}
+
+// statusCapturingWriter records whatever status code the handler
+// actually sent, defaulting to 200 (the same assumption net/http
+// itself makes when a handler never calls WriteHeader explicitly).
+type statusCapturingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusCapturingWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+// auditLog records every state-changing request (POST/PUT/PATCH/
+// DELETE) a logged-in user makes — who, what, from where, and whether
+// it succeeded. GETs aren't logged: on this panel every real action is
+// a non-GET request, and logging every page view would bury the
+// signal. Must run after requireAuth (needs the session) — logging
+// itself never blocks or fails the actual request, since audit-log
+// gaps are far less costly than breaking the feature they're watching.
+func (s *Server) auditLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			next.ServeHTTP(w, r)
+			return
+		}
+		sw := &statusCapturingWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(sw, r)
+
+		sess := sessionFromContext(r)
+		if sess == nil {
+			return
+		}
+		ip := r.RemoteAddr
+		if h, _, err := net.SplitHostPort(ip); err == nil {
+			ip = h
+		}
+		_ = s.store.CreateAuditEntry(sess.UserID, sess.Username, r.Method, r.URL.Path, sw.status, ip)
+	})
 }
 
 // requireModule must run after requireAuth. Admins always pass; a member

@@ -1,0 +1,90 @@
+{{define "network_ssh"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.ssh"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.ssh"}}</h1>
+        <p class="page-sub">{{t .Lang "sshadmin.subtitle"}}</p>
+      </div>
+    </div>
+
+    <div class="error-banner" style="background:rgba(255,91,91,0.08);border-color:rgba(255,91,91,0.3);color:var(--bad);">{{t .Lang "sshadmin.danger_note"}}</div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    <div class="content-grid" style="margin-top:16px;">
+      <div class="panel" style="padding:20px;">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "sshadmin.keys_title"}}</span></div>
+        <form method="post" action="/network/ssh/keys" style="margin-bottom:16px;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <textarea class="input input-plain" name="public_key" style="width:100%;min-height:70px;font-family:var(--font-mono);font-size:12px;" placeholder="{{t .Lang "sshadmin.form_public_key"}}" required></textarea>
+          <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{icon "plus" 15}}{{t .Lang "sshadmin.add_key_button"}}</button>
+        </form>
+
+        {{if not .Keys}}
+        <p style="font-size:12.5px;color:var(--muted);">{{t .Lang "sshadmin.keys_empty"}}</p>
+        {{else}}
+        {{$csrf := .CSRFToken}}
+        {{range .Keys}}
+        <div class="profile-field">
+          <span class="profile-field-value" style="font-family:var(--font-mono);font-size:12px;">{{.Type}} … {{if .Comment}}{{.Comment}}{{else}}—{{end}}</span>
+          <form method="post" action="/network/ssh/keys/delete" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <input type="hidden" name="raw" value="{{.Raw}}">
+            <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
+          </form>
+        </div>
+        {{end}}
+        {{end}}
+      </div>
+
+      <div class="panel" style="padding:20px;">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "sshadmin.settings_title"}}</span></div>
+
+        <div class="info-chips" style="margin-bottom:16px;">
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "sshadmin.current_port"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{.Config.Port}}</span></div>
+          <div class="info-chip"><span class="info-chip-label">{{t .Lang "sshadmin.password_auth_title"}}</span><span class="info-chip-value">{{if .Config.PasswordAuthOn}}{{t .Lang "sshadmin.password_auth_on"}}{{else}}{{t .Lang "sshadmin.password_auth_off"}}{{end}}</span></div>
+        </div>
+
+        <form method="post" action="/network/ssh/port" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <div style="flex:1;">
+            <label class="field-label">{{t .Lang "sshadmin.form_new_port"}}</label>
+            <input class="input input-plain" type="number" name="port" min="1" max="65535" value="{{.Config.Port}}">
+          </div>
+          <button type="submit" class="btn">{{t .Lang "sshadmin.change_port_button"}}</button>
+        </form>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:20px;">{{t .Lang "sshadmin.change_port_note"}}</p>
+
+        <form method="post" action="/network/ssh/password-auth">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          {{if .Config.PasswordAuthOn}}
+          <input type="hidden" name="enabled" value="off">
+          <button type="submit" class="btn btn-danger" style="width:100%;">{{icon "lock" 15}}{{t .Lang "sshadmin.disable_password_button"}}</button>
+          {{else}}
+          <input type="hidden" name="enabled" value="on">
+          <button type="submit" class="btn btn-primary" style="width:100%;">{{t .Lang "sshadmin.enable_password_button"}}</button>
+          {{end}}
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+{{end}}

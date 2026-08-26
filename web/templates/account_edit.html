@@ -67,6 +67,22 @@
             </select>
           </div>
           <div>
+            <label class="field-label">{{t .Lang "servicedesk.support_group"}}</label>
+            <select class="input input-plain" name="support_group_id">
+              <option value="">{{t .Lang "accounts.form_none"}}</option>
+              {{$sgID := derefID .Account.SupportGroupID}}
+              {{range .SupportGroups}}<option value="{{.ID}}"{{if eq .ID $sgID}} selected{{end}}>{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_extension"}}</label>
+            <input class="input input-plain" type="text" name="extension" value="{{.Account.Extension}}">
+          </div>
+          <div>
+            <label class="field-label">{{t .Lang "accounts.form_contract_number"}}</label>
+            <input class="input input-plain" type="text" name="contract_number" value="{{.Account.ContractNumber}}">
+          </div>
+          <div>
             <label class="field-label">{{t .Lang "accounts.form_email"}}</label>
             <input class="input input-plain" type="email" name="email" value="{{.Account.Email}}">
           </div>

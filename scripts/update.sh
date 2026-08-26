@@ -51,7 +51,8 @@ fi
 log "building kursord..."
 BUILD_DIR="$(mktemp -d)"
 trap 'rm -rf "$BUILD_DIR"' EXIT
-go build -o "${BUILD_DIR}/kursord" ./cmd/kursord
+GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+go build -ldflags "-X kursor/internal/version.GitCommit=${GIT_COMMIT}" -o "${BUILD_DIR}/kursord" ./cmd/kursord
 log "build ok"
 
 install -m 0755 "${BUILD_DIR}/kursord" "$BIN_PATH"
