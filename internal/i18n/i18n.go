@@ -635,6 +635,19 @@ var dict = map[string]map[string]string{
 	"portal.subtitle": {"uk": "Ваші звернення до служби підтримки.", "en": "Your support requests."},
 	"portal.my_tickets": {"uk": "Мої звернення", "en": "My Requests"},
 	"portal.new_ticket_button": {"uk": "Нове звернення", "en": "New Request"},
+	"portal.queue_title": {"uk": "Черга тікетів", "en": "Ticket Queue"},
+
+	// Agent sidebar shown inside the portal for accounts with the
+	// "servicedesk" permission (or admin) — a scoped-down version of the
+	// full panel's nav, since a portal agent's whole job here is ticket
+	// work, not the rest of Kursor.
+	"portal.sidebar.queue_section":      {"uk": "Тікети", "en": "Tickets"},
+	"portal.sidebar.all_tickets":        {"uk": "Усі тікети", "en": "All tickets"},
+	"portal.sidebar.assigned_to_me":     {"uk": "Призначені мені", "en": "Assigned to me"},
+	"portal.sidebar.unassigned":         {"uk": "Непризначені", "en": "Unassigned"},
+	"portal.sidebar.my_group":           {"uk": "Моя група", "en": "My group"},
+	"portal.sidebar.management_section": {"uk": "Керування", "en": "Management"},
+	"portal.sidebar.full_panel":         {"uk": "Повна панель", "en": "Full panel"},
 
 	// --- backups (real, not a placeholder) ---
 	"backups.subtitle":     {"uk": "Реальні tar.gz архіви сайтів.", "en": "Real tar.gz site archives."},

@@ -64,8 +64,25 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 		r.Get("/portal", s.handlePortalPage)
 		r.Post("/portal/tickets", s.handlePortalTicketCreate)
 		r.Get("/portal/tickets/{id}", s.handlePortalTicketPage)
+		r.Post("/portal/tickets/{id}/status", s.handlePortalTicketStatus)
+		r.Post("/portal/tickets/{id}/group", s.handlePortalTicketSetGroup)
+		r.Post("/portal/tickets/{id}/escalate", s.handlePortalTicketEscalate)
+		r.Post("/portal/tickets/{id}/assign-me", s.handlePortalTicketAssignToMe)
+		r.Post("/portal/tickets/{id}/assign", s.handlePortalTicketAssign)
+		r.Post("/portal/tickets/{id}/create-account", s.handlePortalTicketCreateAccount)
+		r.Post("/portal/tickets/{id}/grant-access", s.handlePortalTicketGrantAccess)
+		r.Post("/portal/tickets/{id}/terminate-target", s.handlePortalTicketTerminateTarget)
 		r.Post("/portal/tickets/{id}/comments", s.handlePortalTicketComment)
 		r.Get("/portal/tickets/{id}/attachments/{attachment_id}", s.handlePortalAttachmentDownload)
+
+		// Approving a request is a governance action, same admin-only
+		// boundary as the panel's /company/approvals — an admin working
+		// from the portal shouldn't have to leave it for this one thing.
+		r.Group(func(r chi.Router) {
+			r.Use(s.requireAdmin)
+			r.Get("/portal/approvals", s.handlePortalApprovalsPage)
+			r.Post("/portal/tickets/{id}/approval", s.handlePortalTicketApproval)
+		})
 	})
 
 	r.Get("/lang/{code}", func(w http.ResponseWriter, r *http.Request) {

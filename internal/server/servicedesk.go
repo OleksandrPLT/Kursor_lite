@@ -149,6 +149,68 @@ func (s *Server) handleServiceDeskPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// newTicketFromForm builds a NewTicket out of an already-parsed request
+// body — shared by the panel's create-ticket form (handleTicketCreate)
+// and the portal's (handlePortalTicketCreate), so both surfaces offer
+// the exact same request-kind workflows (grant_access/new_account/
+// terminate) off one copy of the parsing, not two that can drift.
+// Caller has already validated title is non-empty and CSRF passed.
+func (s *Server) newTicketFromForm(r *http.Request, requesterID int64, title string) store.NewTicket {
+	ticketType := r.FormValue("type")
+	if ticketType != "incident" && ticketType != "request" && ticketType != "problem" {
+		ticketType = "incident"
+	}
+	priority := r.FormValue("priority")
+	switch priority {
+	case "low", "medium", "high", "critical":
+	default:
+		priority = "medium"
+	}
+	topic := r.FormValue("topic")
+	if !isValidTopic(topic) {
+		topic = "other"
+	}
+
+	nt := store.NewTicket{
+		Title:       title,
+		Description: r.FormValue("description"),
+		Type:        ticketType,
+		Topic:       topic,
+		Reason:      r.FormValue("reason"),
+		Priority:    priority,
+		RequesterID: requesterID,
+	}
+
+	switch r.FormValue("request_kind") {
+	case "grant_access":
+		nt.RequestKind = "grant_access"
+		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
+			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
+				nt.TargetUserID = &user.ID
+			}
+		}
+		nt.RequestedPermissions = parsePermissions(r.Form["requested_permissions"])
+	case "terminate":
+		nt.RequestKind = "terminate"
+		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
+			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
+				nt.TargetUserID = &user.ID
+			}
+		}
+	case "new_account":
+		nt.RequestKind = "new_account"
+		nt.NewLastName = r.FormValue("new_last_name")
+		nt.NewFirstName = r.FormValue("new_first_name")
+		nt.NewPatronymic = r.FormValue("new_patronymic")
+		nt.NewEmail = r.FormValue("new_email")
+		nt.NewPhone = r.FormValue("new_phone")
+		nt.NewHiredAt = r.FormValue("new_hired_at")
+		nt.NewDepartmentID = parseOptionalID(r.FormValue("new_department_id"))
+		nt.NewPositionID = parseOptionalID(r.FormValue("new_position_id"))
+	}
+	return nt
+}
+
 func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromContext(r)
 
@@ -179,58 +241,7 @@ func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 		renderWithError("servicedesk.error.title_required")
 		return
 	}
-	ticketType := r.FormValue("type")
-	if ticketType != "incident" && ticketType != "request" && ticketType != "problem" {
-		ticketType = "incident"
-	}
-	priority := r.FormValue("priority")
-	switch priority {
-	case "low", "medium", "high", "critical":
-	default:
-		priority = "medium"
-	}
-	topic := r.FormValue("topic")
-	if !isValidTopic(topic) {
-		topic = "other"
-	}
-
-	nt := store.NewTicket{
-		Title:       title,
-		Description: r.FormValue("description"),
-		Type:        ticketType,
-		Topic:       topic,
-		Reason:      r.FormValue("reason"),
-		Priority:    priority,
-		RequesterID: sess.UserID,
-	}
-
-	switch r.FormValue("request_kind") {
-	case "grant_access":
-		nt.RequestKind = "grant_access"
-		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
-			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
-				nt.TargetUserID = &user.ID
-			}
-		}
-		nt.RequestedPermissions = parsePermissions(r.Form["requested_permissions"])
-	case "terminate":
-		nt.RequestKind = "terminate"
-		if username := strings.TrimSpace(r.FormValue("target_username")); username != "" {
-			if user, err := s.store.GetUserByUsername(username); err == nil && user != nil {
-				nt.TargetUserID = &user.ID
-			}
-		}
-	case "new_account":
-		nt.RequestKind = "new_account"
-		nt.NewLastName = r.FormValue("new_last_name")
-		nt.NewFirstName = r.FormValue("new_first_name")
-		nt.NewPatronymic = r.FormValue("new_patronymic")
-		nt.NewEmail = r.FormValue("new_email")
-		nt.NewPhone = r.FormValue("new_phone")
-		nt.NewHiredAt = r.FormValue("new_hired_at")
-		nt.NewDepartmentID = parseOptionalID(r.FormValue("new_department_id"))
-		nt.NewPositionID = parseOptionalID(r.FormValue("new_position_id"))
-	}
+	nt := s.newTicketFromForm(r, sess.UserID, title)
 
 	id, err := s.store.CreateTicket(nt)
 	if err != nil {
