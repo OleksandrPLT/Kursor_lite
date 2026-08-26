@@ -81,7 +81,12 @@ func ListSystemUsers() ([]SystemUser, error) {
 		if err != nil {
 			continue
 		}
-		if uid != 0 && uid < minHumanUID {
+		// uid 65534 is the conventional "nobody" sentinel (nfs-nobody,
+		// unmapped-uid fallback, ...) — technically >= minHumanUID but
+		// never a real login, so it'd otherwise slip through the filter
+		// above that's specifically trying to exclude exactly this kind
+		// of account.
+		if (uid != 0 && uid < minHumanUID) || uid == 65534 {
 			continue
 		}
 		gid, _ := strconv.Atoi(fields[3])
