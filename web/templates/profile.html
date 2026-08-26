@@ -59,8 +59,55 @@
           <span class="profile-field-value">{{.Account.TerminatedAt}}</span>
         </div>
         {{end}}
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_extension"}}</span>
+          <span class="profile-field-value">{{if .Account.Extension}}{{.Account.Extension}}{{else}}—{{end}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "accounts.form_contract_number"}}</span>
+          <span class="profile-field-value">{{if .Account.ContractNumber}}{{.Account.ContractNumber}}{{else}}—{{end}}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">{{t .Lang "servicedesk.support_group"}}</span>
+          <span class="profile-field-value">{{if .Account.SupportGroupName}}{{.Account.SupportGroupName}}{{else}}{{t .Lang "servicedesk.no_group"}}{{end}}</span>
+        </div>
       </div>
     </div>
+
+    {{if .IsOwnProfile}}
+    <div class="content-grid" style="margin-top:16px;">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "profile.my_requests"}}</span></div>
+        {{if not .MyTickets}}
+        <p style="font-size:12.5px;color:var(--muted);">—</p>
+        {{else}}
+        {{$lang := .Lang}}
+        {{range .MyTickets}}
+        <a href="/company/servicedesk/{{.ID}}" class="profile-field" style="text-decoration:none;">
+          <span class="profile-field-label" style="font-family:var(--font-mono);">{{.DisplayID}}</span>
+          <span class="profile-field-value">{{.Title}} · {{t $lang (print "servicedesk.status." .Status)}}</span>
+        </a>
+        {{end}}
+        {{end}}
+      </div>
+      {{if eq .Account.Role "admin"}}
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "profile.my_approvals"}}</span></div>
+        {{if not .MyApprovals}}
+        <p style="font-size:12.5px;color:var(--muted);">—</p>
+        {{else}}
+        {{$lang := .Lang}}
+        {{range .MyApprovals}}
+        <a href="/company/servicedesk/{{.ID}}" class="profile-field" style="text-decoration:none;">
+          <span class="profile-field-label" style="font-family:var(--font-mono);">{{.DisplayID}}</span>
+          <span class="profile-field-value">{{.Title}} · {{t $lang (print "ticket.approval." .ApprovalStatus)}}</span>
+        </a>
+        {{end}}
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+    {{end}}
 
     <div class="panel" style="margin-top:16px;">
       <div class="panel-head"><span class="panel-title">{{t .Lang "accounts.profile.access"}}</span></div>

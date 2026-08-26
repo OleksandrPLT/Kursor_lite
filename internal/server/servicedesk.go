@@ -169,7 +169,7 @@ func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
 		renderWithError("login.error.csrf")
 		return
 	}
@@ -237,6 +237,10 @@ func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	if file, header, ferr := r.FormFile("attachment"); ferr == nil {
+		defer file.Close()
+		_ = saveTicketAttachment(s.store, s.cfg.DataDir, id, nil, sess.UserID, file, header)
+	}
 	if nt.RequestKind != "" {
 		// Only the three request-kind workflows ever set requires_approval
 		// (see store.CreateTicket) — a plain ticket never needs this.
@@ -275,11 +279,28 @@ type TicketData struct {
 	IsAgent       bool
 	Ticket        store.Ticket
 	Comments      []store.TicketComment
+	Attachments   []store.TicketAttachment
 	AllUsers      []store.User
 	SupportGroups []store.SupportGroup
 	NewUsername   string
 	NewPassword   string
 	FormErrorKey  string
+}
+
+// ticketAttachmentsByComment groups a ticket's attachments by which
+// comment they belong to (0 for ones attached to the ticket itself) —
+// a template helper so ticket.html can render each comment's own
+// attachments inline without a per-comment DB query.
+func ticketAttachmentsByComment(attachments []store.TicketAttachment) map[int64][]store.TicketAttachment {
+	out := map[int64][]store.TicketAttachment{}
+	for _, a := range attachments {
+		key := int64(0)
+		if a.CommentID != nil {
+			key = *a.CommentID
+		}
+		out[key] = append(out[key], a)
+	}
+	return out
 }
 
 // loadTicket fetches a ticket and enforces access: agents see
@@ -311,12 +332,14 @@ func (s *Server) handleTicketPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	comments, _ := s.store.ListTicketComments(ticket.ID)
+	attachments, _ := s.store.ListTicketAttachments(ticket.ID)
 
 	data := TicketData{
-		PageData: s.basePageData(w, r, "company-servicedesk", sess),
-		IsAgent:  isAgent(sess),
-		Ticket:   *ticket,
-		Comments: comments,
+		PageData:    s.basePageData(w, r, "company-servicedesk", sess),
+		IsAgent:     isAgent(sess),
+		Ticket:      *ticket,
+		Comments:    comments,
+		Attachments: attachments,
 	}
 	if data.IsAgent {
 		data.AllUsers, _ = s.store.ListUsers()
@@ -440,7 +463,7 @@ func (s *Server) handleTicketEscalate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = s.store.SetTicketSupportGroup(ticket.ID, &next.ID)
-	_ = s.store.AddTicketComment(ticket.ID, sess.UserID, i18n.T(notifLang, "servicedesk.escalated_notice")+" "+next.Name)
+	_, _ = s.store.AddTicketComment(ticket.ID, sess.UserID, i18n.T(notifLang, "servicedesk.escalated_notice")+" "+next.Name)
 	s.notifyGroup(next.ID, ticket, sess.UserID)
 
 	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
@@ -513,13 +536,17 @@ func (s *Server) handleTicketComment(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
 		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 		return
 	}
 	body := r.FormValue("body")
 	if body != "" {
-		_ = s.store.AddTicketComment(ticket.ID, sess.UserID, body)
+		commentID, _ := s.store.AddTicketComment(ticket.ID, sess.UserID, body)
+		if file, header, ferr := r.FormFile("attachment"); ferr == nil {
+			defer file.Close()
+			_ = saveTicketAttachment(s.store, s.cfg.DataDir, ticket.ID, &commentID, sess.UserID, file, header)
+		}
 		// Notify "the other side" of the conversation — the requester if
 		// an agent just commented, or the assignee (if any) if the
 		// requester themselves just commented. Never notify yourself.

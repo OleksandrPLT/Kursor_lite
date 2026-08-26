@@ -22,8 +22,9 @@ func loadTemplates() (*template.Template, error) {
 			}
 			return *p
 		},
-		"humanSize":  humanSize,
-		"topicLabel": topicLabel,
+		"humanSize":                  humanSize,
+		"topicLabel":                 topicLabel,
+		"ticketAttachmentsByComment": ticketAttachmentsByComment,
 	}
 	return template.New("").Funcs(funcs).ParseFS(web.FS, "templates/*.html", "templates/partials/*.html")
 }
@@ -46,6 +47,7 @@ func getLang(r *http.Request) string {
 type PageData struct {
 	Lang         string
 	Active       string // "dashboard" | "sites" | "files" | "databases" | "accounts"
+	UserID       int64
 	Username     string
 	UserInitials string
 	Role         string // "admin" | "member"
@@ -88,14 +90,17 @@ type PlaceholderData struct {
 func (s *Server) basePageData(w http.ResponseWriter, r *http.Request, active string, sess *store.Session) PageData {
 	h := getHostSnapshot()
 	username, role := "admin", "member"
+	var userID int64
 	var can func(string) bool = func(string) bool { return false }
 	if sess != nil {
 		username, role = sess.Username, sess.Role
+		userID = sess.UserID
 		can = sess.HasModule
 	}
 	data := PageData{
 		Lang:         getLang(r),
 		Active:       active,
+		UserID:       userID,
 		Username:     username,
 		UserInitials: userInitials(username),
 		Role:         role,

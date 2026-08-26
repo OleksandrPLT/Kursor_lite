@@ -106,16 +106,25 @@
         <div class="panel-head"><span class="panel-title">{{t .Lang "servicedesk.form_description"}}</span></div>
         {{if .Ticket.Reason}}<p style="font-family:var(--font-mono); font-size:12px; color:var(--accent); margin:0 0 10px;">{{.Ticket.Reason}}</p>{{end}}
         <p style="font-size:13.5px; color:var(--text); white-space:pre-wrap; line-height:1.6;">{{if .Ticket.Description}}{{.Ticket.Description}}{{else}}—{{end}}</p>
+        {{$byComment := ticketAttachmentsByComment .Attachments}}
+        {{$ticketFiles := index $byComment 0}}
+        {{if $ticketFiles}}
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+          {{range $ticketFiles}}
+          <a href="/company/servicedesk/{{$.Ticket.ID}}/attachments/{{.ID}}" class="access-badge" style="text-decoration:none;">{{icon "folder" 13}}{{.OriginalName}}</a>
+          {{end}}
+        </div>
+        {{end}}
       </div>
 
       <div class="panel">
         <div class="profile-field">
           <span class="profile-field-label">{{t .Lang "ticket.requester"}}</span>
-          <span class="profile-field-value">{{.Ticket.RequesterName}}</span>
+          <span class="profile-field-value"><a href="/accounts/{{.Ticket.RequesterID}}" style="color:var(--accent);">{{.Ticket.RequesterName}}</a></span>
         </div>
         <div class="profile-field">
           <span class="profile-field-label">{{t .Lang "ticket.assignee"}}</span>
-          <span class="profile-field-value">{{if .Ticket.AssigneeName}}{{.Ticket.AssigneeName}}{{else}}{{t .Lang "servicedesk.unassigned"}}{{end}}</span>
+          <span class="profile-field-value">{{if .Ticket.AssigneeName}}<a href="/accounts/{{derefID .Ticket.AssigneeID}}" style="color:var(--accent);">{{.Ticket.AssigneeName}}</a>{{else}}{{t .Lang "servicedesk.unassigned"}}{{end}}</span>
         </div>
         <div class="profile-field">
           <span class="profile-field-label">{{t .Lang "ticket.due"}}</span>
@@ -207,6 +216,7 @@
       {{if not .Comments}}
       <p style="font-size:12.5px; color:var(--muted);">{{t .Lang "ticket.no_comments"}}</p>
       {{else}}
+      {{$byComment := ticketAttachmentsByComment .Attachments}}
       <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
         {{range .Comments}}
         <div style="display:flex; gap:12px;">
@@ -217,15 +227,24 @@
               <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--muted);">{{.CreatedAt.Format "Jan 2, 15:04"}}</span>
             </div>
             <div style="font-size:13px; color:var(--text); white-space:pre-wrap;">{{.Body}}</div>
+            {{$files := index $byComment .ID}}
+            {{if $files}}
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">
+              {{range $files}}
+              <a href="/company/servicedesk/{{$.Ticket.ID}}/attachments/{{.ID}}" class="access-badge" style="text-decoration:none;">{{icon "folder" 13}}{{.OriginalName}}</a>
+              {{end}}
+            </div>
+            {{end}}
           </div>
         </div>
         {{end}}
       </div>
       {{end}}
 
-      <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/comments">
+      <form method="post" action="/company/servicedesk/{{.Ticket.ID}}/comments" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <textarea name="body" class="input input-plain" style="width:100%;min-height:70px;" placeholder="{{t .Lang "ticket.comment_placeholder"}}" required></textarea>
+        <input class="input input-plain" type="file" name="attachment" style="margin-top:8px;">
         <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{t .Lang "ticket.comment_submit"}}</button>
       </form>
     </div>

@@ -361,6 +361,12 @@ func (s *Store) ListPendingApprovals() ([]Ticket, error) {
 	return s.queryTickets(`SELECT ` + ticketSelect + ` ` + ticketFrom + ` WHERE t.approval_status = 'pending' ORDER BY t.created_at ASC`)
 }
 
+// ListTicketsApprovedBy is one admin's approval history — "Мої
+// погодження" on their own profile page.
+func (s *Store) ListTicketsApprovedBy(userID int64) ([]Ticket, error) {
+	return s.queryTickets(`SELECT `+ticketSelect+` `+ticketFrom+` WHERE t.approved_by = ? ORDER BY t.approved_at DESC`, userID)
+}
+
 // SetTicketApproval records an approve/reject decision.
 func (s *Store) SetTicketApproval(id int64, status string, approvedBy int64) error {
 	_, err := s.db.Exec(`UPDATE tickets SET approval_status = ?, approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?`,
@@ -398,10 +404,13 @@ type TicketComment struct {
 }
 
 // AddTicketComment appends a comment to a ticket's timeline.
-func (s *Store) AddTicketComment(ticketID, authorID int64, body string) error {
-	_, err := s.db.Exec(`INSERT INTO ticket_comments (ticket_id, author_id, body, created_at) VALUES (?, ?, ?, ?)`,
+func (s *Store) AddTicketComment(ticketID, authorID int64, body string) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO ticket_comments (ticket_id, author_id, body, created_at) VALUES (?, ?, ?, ?)`,
 		ticketID, authorID, body, time.Now().UTC().Format(time.RFC3339))
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }
 
 // ListTicketComments returns a ticket's timeline, oldest first.

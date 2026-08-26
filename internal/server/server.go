@@ -192,6 +192,7 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 		r.Post("/company/servicedesk/{id}/grant-access", s.handleTicketGrantAccess)
 		r.Post("/company/servicedesk/{id}/terminate-target", s.handleTicketTerminateTarget)
 		r.Post("/company/servicedesk/{id}/comments", s.handleTicketComment)
+		r.Get("/company/servicedesk/{id}/attachments/{attachment_id}", s.handleTicketAttachmentDownload)
 
 		// Notifications: every logged-in user has their own — not gated
 		// by any module permission, same reasoning as Service Desk above.
@@ -201,11 +202,16 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 
 		r.Get("/accounts/{id}/avatar", s.handleAccountAvatar)
 
+		// Viewing a profile (read-only) is open to every logged-in
+		// user, not just admins — "who is this person" is reasonable to
+		// know regardless of module access; editing (below, inside the
+		// requireAdmin group) stays admin-only.
+		r.Get("/accounts/{id}", s.handleAccountProfile)
+
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAdmin)
 			r.Get("/accounts", s.handleAccountsPage)
 			r.Post("/accounts", s.handleAccountsCreate)
-			r.Get("/accounts/{id}", s.handleAccountProfile)
 			r.Get("/accounts/{id}/edit", s.handleAccountEditPage)
 			r.Post("/accounts/{id}/edit", s.handleAccountEditSubmit)
 			r.Post("/accounts/{id}/reset-password", s.handleAccountResetPassword)

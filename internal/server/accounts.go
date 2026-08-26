@@ -54,7 +54,10 @@ type AccountsData struct {
 // ProfileData backs the read-only profile detail page for one account.
 type ProfileData struct {
 	PageData
-	Account store.User
+	Account      store.User
+	IsOwnProfile bool
+	MyTickets    []store.Ticket // only populated for IsOwnProfile — "Мої запити"
+	MyApprovals  []store.Ticket // only populated for IsOwnProfile admins — "Мої погодження"
 }
 
 // AccountEditData backs the edit-account page.
@@ -102,10 +105,24 @@ func (s *Server) handleAccountProfile(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.render(w, "profile", ProfileData{
-		PageData: s.basePageData(w, r, "accounts", sess),
-		Account:  *account,
-	})
+	data := ProfileData{
+		PageData:     s.basePageData(w, r, "accounts", sess),
+		Account:      *account,
+		IsOwnProfile: sess != nil && sess.UserID == account.ID,
+	}
+	if data.IsOwnProfile {
+		data.MyTickets, _ = s.store.ListTicketsForRequester(account.ID)
+		if len(data.MyTickets) > 5 {
+			data.MyTickets = data.MyTickets[:5]
+		}
+		if account.Role == "admin" {
+			data.MyApprovals, _ = s.store.ListTicketsApprovedBy(account.ID)
+			if len(data.MyApprovals) > 5 {
+				data.MyApprovals = data.MyApprovals[:5]
+			}
+		}
+	}
+	s.render(w, "profile", data)
 }
 
 // handleAccountAvatar serves a stored profile photo. Any authenticated

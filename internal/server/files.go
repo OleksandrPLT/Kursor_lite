@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxUploadBytes = 50 << 20 // 50MB
+	maxUploadBytes = 50 << 20  // 50MB
 	maxEditBytes   = 512 << 10 // 512KB — above this, edit in place is refused; download instead
 )
 
@@ -25,9 +25,9 @@ type Breadcrumb struct {
 
 // FileRow is one directory-listing row, pre-formatted for the template.
 type FileRow struct {
-	Name     string
-	IsDir    bool
-	Path     string // relative path, for links
+	Name      string
+	IsDir     bool
+	Path      string // relative path, for links
 	SizeText  string
 	Modified  string
 	Mode      string
@@ -43,11 +43,11 @@ type FilesData struct {
 	ErrorKey    string
 
 	// set only when viewing/editing one file
-	Editing        bool
-	EditPath       string
-	EditContent    string
-	EditTooLarge   bool
-	EditNotText    bool
+	Editing      bool
+	EditPath     string
+	EditContent  string
+	EditTooLarge bool
+	EditNotText  bool
 }
 
 func breadcrumbs(relPath string) []Breadcrumb {

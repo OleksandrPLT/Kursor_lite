@@ -604,6 +604,9 @@ var dict = map[string]map[string]string{
 	"profile.my_approvals": {"uk": "Мої погодження", "en": "My Approvals"},
 	"profile.view_profile": {"uk": "Профіль", "en": "Profile"},
 
+	// --- Ticket attachments (real, not a placeholder) ---
+	"servicedesk.form_attachment": {"uk": "Файл (необов'язково, до 10 МБ)", "en": "File (optional, up to 10 MB)"},
+
 	// --- backups (real, not a placeholder) ---
 	"backups.subtitle":     {"uk": "Реальні tar.gz архіви сайтів.", "en": "Real tar.gz site archives."},
 	"backups.form_source":  {"uk": "Що архівувати", "en": "What to back up"},

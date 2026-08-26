@@ -39,14 +39,14 @@
       </div>
     </details>
     <div class="vdivider"></div>
-    <div class="account">
+    <a href="/accounts/{{.UserID}}" class="account" style="text-decoration:none;">
       <div class="avatar">{{.UserInitials}}</div>
       <div>
         <div class="account-name">{{.Username}}</div>
         <div class="account-role">{{if .IsAdmin}}{{t .Lang "topbar.role.admin"}}{{else}}{{t .Lang "topbar.role.member"}}{{end}}</div>
       </div>
       {{icon "chevronDown" 14}}
-    </div>
+    </a>
   </div>
 </div>
 {{end}}
