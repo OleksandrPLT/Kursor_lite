@@ -89,6 +89,14 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 		s.handleSetLang(w, r, chi.URLParam(r, "code"))
 	})
 
+	// A VPN install link — deliberately public, no session of any kind:
+	// the token in the URL (see store.ResolveVPNInstallToken) is what
+	// stands in for auth here, same as a signed download URL. Whoever
+	// holds the link opens it on the device they're setting up, which by
+	// definition doesn't have a Kursor session yet.
+	r.Get("/vpn/install/{token}", s.handleVPNInstallPage)
+	r.Get("/vpn/install/{token}/config", s.handleVPNInstallConfigDownload)
+
 	// OIDC endpoints consumed by external apps, not browsers with a
 	// Kursor session — no auth middleware; each authenticates its own
 	// way (client_secret, PKCE, or a bearer token).
@@ -197,8 +205,11 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 			r.Post("/network/vpn/install", s.handleVPNInstall)
 			r.Post("/network/vpn/settings", s.handleVPNSettingsUpdate)
 			r.Post("/network/vpn/peers", s.handleVPNPeerCreate)
+			r.Post("/network/vpn/peers/{id}/edit", s.handleVPNPeerEdit)
 			r.Post("/network/vpn/peers/{id}/toggle", s.handleVPNPeerToggle)
 			r.Post("/network/vpn/peers/{id}/delete", s.handleVPNPeerDelete)
+			r.Post("/network/vpn/peers/{id}/install-link", s.handleVPNInstallLinkCreate)
+			r.Post("/network/vpn/peers/{id}/install-link/revoke", s.handleVPNInstallLinkRevoke)
 			r.Get("/network/ssh", s.handleSSHPage)
 			r.Post("/network/ssh/keys", s.handleSSHKeyAdd)
 			r.Post("/network/ssh/keys/delete", s.handleSSHKeyDelete)

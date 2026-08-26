@@ -41,6 +41,14 @@
     </div>
     {{end}}
 
+    {{if .NewInstallLinkURL}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "vpn.install_link_ready_title"}}</div>
+      <input readonly class="input input-plain" style="width:100%;font-family:var(--font-mono);font-size:12.5px;margin-top:8px;" value="{{.NewInstallLinkURL}}" onclick="this.select()">
+      <div class="created-banner-hint">{{t .Lang "vpn.install_link_ready_hint"}}</div>
+    </div>
+    {{end}}
+
     <div class="panel" style="padding:22px;margin-bottom:16px;">
       <div class="panel-head"><span class="panel-title">{{t .Lang "vpn.settings_title"}}</span></div>
       <form method="post" action="/network/vpn/settings" class="form-grid" style="grid-template-columns:2fr 1fr auto;align-items:end;">
@@ -79,6 +87,11 @@
           </div>
           <button type="submit" class="btn btn-primary">{{t .Lang "vpn.create_button"}}</button>
         </div>
+        <div style="margin-top:12px;">
+          <label class="field-label">{{t .Lang "vpn.form_client_routes"}}</label>
+          <input class="input input-plain" type="text" name="client_allowed_ips" placeholder="{{.Settings.ServerAddress}}" style="width:100%;">
+          <p style="font-size:11px;color:var(--muted);margin-top:4px;">{{t .Lang "vpn.form_client_routes_hint"}}</p>
+        </div>
       </form>
     </details>
 
@@ -93,22 +106,71 @@
         <span class="table-head">{{t .Lang "accounts.table_status"}}</span>
         <span></span>
       </div>
+      {{$lang := .Lang}}
+      {{$csrf := .CSRFToken}}
+      {{$expiries := .InstallLinkExpiry}}
       {{range .Peers}}
       <div class="accounts-row" style="grid-template-columns:1.4fr 1.2fr 1fr 0.8fr 1fr;{{if not .Enabled}}opacity:0.55;{{end}}">
         <span style="font-size:13.5px;color:var(--text);">{{.Name}}</span>
         <span class="cell-muted">{{if .UserName}}{{.UserName}}{{else}}—{{end}}</span>
         <span class="cell-muted" style="font-family:var(--font-mono);">{{.AllowedIP}}</span>
-        <span class="status-badge status-{{if .Enabled}}active{{else}}disabled{{end}}">{{if .Enabled}}{{t $.Lang "accounts.status.active"}}{{else}}{{t $.Lang "accounts.status.disabled"}}{{end}}</span>
+        <span class="status-badge status-{{if .Enabled}}active{{else}}disabled{{end}}">{{if .Enabled}}{{t $lang "accounts.status.active"}}{{else}}{{t $lang "accounts.status.disabled"}}{{end}}</span>
         <span class="row-actions">
           <form method="post" action="/network/vpn/peers/{{.ID}}/toggle">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button type="submit" class="link-action">{{if .Enabled}}{{t $.Lang "accounts.action.disable"}}{{else}}{{t $.Lang "accounts.action.enable"}}{{end}}</button>
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <button type="submit" class="link-action">{{if .Enabled}}{{t $lang "accounts.action.disable"}}{{else}}{{t $lang "accounts.action.enable"}}{{end}}</button>
           </form>
           <form method="post" action="/network/vpn/peers/{{.ID}}/delete">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
             <button type="submit" class="link-action link-danger">{{icon "trash" 14}}</button>
           </form>
         </span>
+      </div>
+
+      <div style="padding:2px 14px 14px;border-bottom:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;{{if not .Enabled}}opacity:0.55;{{end}}">
+        <details style="flex:1;min-width:260px;">
+          <summary class="link-action" style="display:inline-flex;">{{icon "pencil" 13}}{{t $lang "vpn.edit_button"}}</summary>
+          <form method="post" action="/network/vpn/peers/{{.ID}}/edit" class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px;max-width:520px;">
+            <input type="hidden" name="csrf_token" value="{{$csrf}}">
+            <div>
+              <label class="field-label">{{t $lang "vpn.form_peer_name"}}</label>
+              <input class="input input-plain" type="text" name="name" value="{{.Name}}" required>
+            </div>
+            <div>
+              <label class="field-label">{{t $lang "vpn.form_target_user"}}</label>
+              <input class="input input-plain" type="text" name="target_username" list="vpn-all-users" value="{{.UserName}}" placeholder="{{t $lang "ticket.assign_search_placeholder"}}">
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label class="field-label">{{t $lang "vpn.form_client_routes"}}</label>
+              <input class="input input-plain" type="text" name="client_allowed_ips" value="{{.ClientAllowedIPs}}" style="width:100%;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="grid-column:1 / -1;">{{t $lang "vpn.save_button"}}</button>
+          </form>
+        </details>
+
+        <div style="flex:1;min-width:260px;">
+          {{if not .EncryptedPrivateKey}}
+          <span class="cell-muted" style="font-size:12px;">{{t $lang "vpn.install_link_unavailable"}}</span>
+          {{else}}
+            {{$exp := index $expiries .ID}}
+            {{if $exp}}
+            <span class="cell-muted" style="font-size:12px;">{{t $lang "vpn.install_link_active"}} {{$exp.Format "Jan 2, 15:04"}}</span>
+            <form method="post" action="/network/vpn/peers/{{.ID}}/install-link" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{$csrf}}">
+              <button type="submit" class="link-action">{{icon "refresh" 13}}{{t $lang "vpn.install_link_button"}}</button>
+            </form>
+            <form method="post" action="/network/vpn/peers/{{.ID}}/install-link/revoke" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{$csrf}}">
+              <button type="submit" class="link-action link-danger">{{t $lang "vpn.install_link_revoke"}}</button>
+            </form>
+            {{else}}
+            <form method="post" action="/network/vpn/peers/{{.ID}}/install-link">
+              <input type="hidden" name="csrf_token" value="{{$csrf}}">
+              <button type="submit" class="link-action">{{icon "link" 13}}{{t $lang "vpn.install_link_button"}}</button>
+            </form>
+            {{end}}
+          {{end}}
+        </div>
       </div>
       {{end}}
       {{end}}
