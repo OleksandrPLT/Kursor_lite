@@ -169,7 +169,7 @@ func (s *Server) handleTicketCreate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
+	if !parseTicketFormAndCheckCSRF(r) {
 		renderWithError("login.error.csrf")
 		return
 	}
@@ -536,7 +536,7 @@ func (s *Server) handleTicketComment(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
+	if !parseTicketFormAndCheckCSRF(r) {
 		http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 		return
 	}

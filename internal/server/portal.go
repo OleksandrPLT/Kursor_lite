@@ -109,7 +109,7 @@ func (s *Server) handlePortalTicketCreate(w http.ResponseWriter, r *http.Request
 		data.FormErrorKey = key
 		s.render(w, "portal", data)
 	}
-	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
+	if !parseTicketFormAndCheckCSRF(r) {
 		renderErr("login.error.csrf")
 		return
 	}
@@ -204,7 +204,7 @@ func (s *Server) handlePortalTicketComment(w http.ResponseWriter, r *http.Reques
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseMultipartForm(maxAttachmentSize + (1 << 20)); err != nil || !auth.ValidCSRF(r) {
+	if !parseTicketFormAndCheckCSRF(r) {
 		http.Redirect(w, r, "/portal/tickets/"+strconv.FormatInt(ticket.ID, 10), http.StatusSeeOther)
 		return
 	}

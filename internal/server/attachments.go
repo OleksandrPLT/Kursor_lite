@@ -14,8 +14,28 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"kursor/internal/auth"
 	"kursor/internal/store"
 )
+
+// parseTicketFormAndCheckCSRF accepts either a plain urlencoded POST or
+// a multipart one (only the latter can carry a file) and validates the
+// CSRF token — one shared gate for every ticket-workflow handler that
+// might receive an attachment. ParseMultipartForm's own error return
+// covers two very different situations that must NOT be conflated: a
+// request that simply isn't multipart/form-data (still has perfectly
+// good normal form fields — r.ParseForm ran as its first step
+// regardless) versus one that's genuinely malformed. Bailing out on
+// the first case as if it were an invalid session — which a naive
+// `err != nil || !ValidCSRF(r)` does — means any real API client
+// posting plain form-urlencoded (no file, so no reason to bother with
+// multipart) gets a misleading "session expired" instead of just
+// working; the CSRF check below is the only thing this must actually
+// gate on.
+func parseTicketFormAndCheckCSRF(r *http.Request) bool {
+	_ = r.ParseMultipartForm(maxAttachmentSize + (1 << 20))
+	return auth.ValidCSRF(r)
+}
 
 // maxAttachmentSize caps a single upload — generous enough for a
 // screenshot or a short document, small enough that a ticket thread
