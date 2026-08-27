@@ -47,9 +47,15 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 	}
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	r.Get("/login", s.handleLoginPage)
-	r.Post("/login", s.handleLoginSubmit)
-	r.Post("/logout", s.handleLogout)
+	// The panel's own optional IP allow-list (see panelaccess.go) gates
+	// the login page itself, not just what's behind it — an IP that
+	// can't reach anything else shouldn't even get to try a password.
+	r.Group(func(r chi.Router) {
+		r.Use(s.requirePanelIPAllowed)
+		r.Get("/login", s.handleLoginPage)
+		r.Post("/login", s.handleLoginSubmit)
+		r.Post("/logout", s.handleLogout)
+	})
 
 	// The Service Desk portal — a minimal, sidebar-free surface for
 	// accounts that only ever need to submit/track their own tickets.
@@ -115,6 +121,7 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 	})
 
 	r.Group(func(r chi.Router) {
+		r.Use(s.requirePanelIPAllowed)
 		r.Use(s.requireAuth)
 		r.Use(s.auditLog)
 
@@ -295,6 +302,11 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 
 			r.Get("/system/audit-log", s.handleAuditLogPage)
 			r.Get("/system/updates", s.handleUpdatesPage)
+			r.Get("/system/panel-settings", s.handlePanelSettingsPage)
+			r.Post("/system/panel-settings/domain", s.handlePanelDomainCheck)
+			r.Post("/system/panel-settings/proxy", s.handlePanelProxySetup)
+			r.Post("/system/panel-settings/port", s.handlePanelPortChange)
+			r.Post("/system/panel-settings/allowed-ips", s.handlePanelAllowedIPsUpdate)
 			// API keys live under Integrations now (see internal/server/integrations.go) — redirect the old nav slot rather than 404 anyone with it bookmarked.
 			r.Get("/system/api-keys", func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/company/integrations", http.StatusMovedPermanently)

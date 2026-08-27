@@ -2,8 +2,11 @@ package server
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"kursor/internal/auth"
+	"kursor/internal/i18n"
 )
 
 func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
@@ -32,12 +35,31 @@ func (s *Server) handleLoginSubmit(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	// Brute-force check happens before touching the password at all —
+	// a locked-out account gets the same generic message regardless of
+	// whether the password just entered would even have been right, so
+	// this never confirms or denies anything about the real password.
+	if locked, until, err := s.store.IsLoginLockedOut(username); err == nil && locked {
+		lang := getLang(r)
+		minutesLeft := int(until.Sub(time.Now().UTC()).Minutes()) + 1
+		s.render(w, "login", LoginData{
+			Lang:        lang,
+			ErrorKey:    "login.error.locked_out",
+			ErrorDetail: "(" + strconv.Itoa(minutesLeft) + " " + i18n.T(lang, "login.minutes_short") + ")",
+			CSRFToken:   auth.IssueCSRFToken(w),
+		})
+		return
+	}
+
 	user, err := s.store.GetUserByUsername(username)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if user == nil || !auth.CheckPassword(user.PasswordHash, password) {
+		if username != "" {
+			_ = s.store.RecordFailedLogin(username)
+		}
 		s.render(w, "login", LoginData{
 			Lang:      getLang(r),
 			ErrorKey:  "login.error.invalid",
@@ -54,6 +76,7 @@ func (s *Server) handleLoginSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_ = s.store.ClearLoginLockout(username)
 	if err := auth.StartSession(w, s.store, user.ID, r); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

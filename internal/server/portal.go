@@ -35,9 +35,10 @@ import (
 
 // PortalLoginData backs /portal/login.
 type PortalLoginData struct {
-	Lang      string
-	ErrorKey  string
-	CSRFToken string
+	Lang        string
+	ErrorKey    string
+	ErrorDetail string
+	CSRFToken   string
 }
 
 func (s *Server) handlePortalLoginPage(w http.ResponseWriter, r *http.Request) {
@@ -49,26 +50,42 @@ func (s *Server) handlePortalLoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePortalLoginSubmit(w http.ResponseWriter, r *http.Request) {
-	renderErr := func(key string) {
-		s.render(w, "portal_login", PortalLoginData{Lang: getLang(r), ErrorKey: key, CSRFToken: auth.IssueCSRFToken(w)})
+	renderErr := func(key, detail string) {
+		s.render(w, "portal_login", PortalLoginData{Lang: getLang(r), ErrorKey: key, ErrorDetail: detail, CSRFToken: auth.IssueCSRFToken(w)})
 	}
 	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
-		renderErr("login.error.csrf")
+		renderErr("login.error.csrf", "")
 		return
 	}
-	user, err := s.store.GetUserByUsername(r.FormValue("username"))
+	username := r.FormValue("username")
+
+	// Same account, same brute-force lockout as the main panel's login
+	// (store.IsLoginLockedOut/RecordFailedLogin) — a portal-only account
+	// deserves the same protection as an admin one.
+	if locked, until, err := s.store.IsLoginLockedOut(username); err == nil && locked {
+		lang := getLang(r)
+		minutesLeft := int(until.Sub(time.Now().UTC()).Minutes()) + 1
+		renderErr("login.error.locked_out", "("+strconv.Itoa(minutesLeft)+" "+i18n.T(lang, "login.minutes_short")+")")
+		return
+	}
+
+	user, err := s.store.GetUserByUsername(username)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if user == nil || !auth.CheckPassword(user.PasswordHash, r.FormValue("password")) {
-		renderErr("login.error.invalid")
+		if username != "" {
+			_ = s.store.RecordFailedLogin(username)
+		}
+		renderErr("login.error.invalid", "")
 		return
 	}
 	if user.Status != "active" {
-		renderErr("login.error.disabled")
+		renderErr("login.error.disabled", "")
 		return
 	}
+	_ = s.store.ClearLoginLockout(username)
 	if err := auth.StartSession(w, s.store, user.ID, r); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

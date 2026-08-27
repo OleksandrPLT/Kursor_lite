@@ -48,7 +48,7 @@
       <h2>{{t .Lang "login.welcome"}}</h2>
       <p class="login-target">{{t .Lang "login.target"}}</p>
 
-      {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}</div>{{end}}
+      {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
 
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 

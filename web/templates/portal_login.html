@@ -42,7 +42,7 @@
     <form class="login-form" method="post" action="/portal/login">
       <h2>{{t .Lang "login.welcome"}}</h2>
 
-      {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}</div>{{end}}
+      {{if .ErrorKey}}<div class="error-banner">{{t .Lang .ErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
 
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 

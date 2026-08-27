@@ -73,9 +73,10 @@ type PageData struct {
 // a pre-rendered message) so the same page renders correctly regardless
 // of which language cookie the visitor has.
 type LoginData struct {
-	Lang      string
-	ErrorKey  string
-	CSRFToken string
+	Lang        string
+	ErrorKey    string
+	ErrorDetail string
+	CSRFToken   string
 }
 
 // PlaceholderData backs the "coming soon" stub pages for modules not

@@ -1,0 +1,139 @@
+{{define "panel_settings"}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "nav.panel_settings"}} · Kursor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app">
+  {{template "sidebar" .}}
+  <div class="main">
+    {{template "topbar" .}}
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{t .Lang "nav.panel_settings"}}</h1>
+        <p class="page-sub">{{t .Lang "panelsettings.subtitle"}}</p>
+      </div>
+    </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}{{if .ErrorDetail}} {{.ErrorDetail}}{{end}}</div>{{end}}
+
+    {{if .RestartPending}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "panelsettings.restart_pending_title"}}</div>
+      <div class="created-banner-hint">{{t .Lang "panelsettings.restart_pending_hint"}}</div>
+      <div style="margin-top:8px;"><span class="kbd">http://{{.RestartHost}}:{{.NewPort}}</span></div>
+    </div>
+    {{end}}
+
+    <!-- ===== Domain ===== -->
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "panelsettings.domain_section_title"}}</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">{{t .Lang "panelsettings.domain_section_hint"}}</p>
+
+      {{if not .NginxReady}}<div class="error-banner" style="margin-bottom:14px;">{{t .Lang "panelsettings.nginx_not_ready"}}</div>{{end}}
+      {{if not .CertbotReady}}<div class="error-banner" style="margin-bottom:14px;">{{t .Lang "panelsettings.certbot_not_ready"}}</div>{{end}}
+
+      <form method="post" action="/system/panel-settings/domain" class="form-grid" style="grid-template-columns:1.4fr 1fr auto;align-items:end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label class="field-label">{{t .Lang "panelsettings.form_domain"}}</label>
+          <input class="input input-plain" type="text" name="domain" value="{{.Settings.Domain}}" placeholder="panel.example.com" required>
+        </div>
+        <div>
+          <label class="field-label">{{t .Lang "panelsettings.form_contact_email"}}</label>
+          <input class="input input-plain" type="email" name="contact_email" value="{{.Settings.ContactEmail}}">
+        </div>
+        <button type="submit" class="btn">{{icon "search" 14}}{{t .Lang "panelsettings.check_button"}}</button>
+      </form>
+
+      {{if .Checked}}
+      <div class="info-chips" style="margin-top:16px;">
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "panelsettings.public_ip_label"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{if .PublicIP}}{{.PublicIP}}{{else}}—{{end}}</span></div>
+        <div class="info-chip">
+          <span class="info-chip-label">{{t .Lang "panelsettings.resolved_ips_label"}}</span>
+          <span class="info-chip-value" style="font-family:var(--font-mono);">{{if .ResolvedIPs}}{{range $i, $ip := .ResolvedIPs}}{{if $i}}, {{end}}{{$ip}}{{end}}{{else}}{{t $.Lang "panelsettings.no_records"}}{{end}}</span>
+        </div>
+        <div class="info-chip">
+          <span class="info-chip-label">{{t .Lang "panelsettings.nameservers_label"}}</span>
+          <span class="info-chip-value cell-muted">{{if .Nameservers}}{{range $i, $ns := .Nameservers}}{{if $i}}, {{end}}{{$ns}}{{end}}{{else}}{{t $.Lang "panelsettings.no_records"}}{{end}}</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        {{if .PointsHere}}
+        <span class="status-badge status-active">{{icon "check" 13}}{{t .Lang "panelsettings.points_here_yes"}}</span>
+        {{else}}
+        <span class="status-badge status-disabled">{{t .Lang "panelsettings.points_here_no"}}</span>
+        {{end}}
+      </div>
+      {{if and .PointsHere .NginxReady .CertbotReady}}
+      <form method="post" action="/system/panel-settings/proxy" style="margin-top:14px;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="btn btn-primary js-install-form">{{icon "shield" 15}}{{t .Lang "panelsettings.setup_proxy_button"}}</button>
+      </form>
+      {{end}}
+      {{end}}
+
+      {{if .Settings.ProxyConfPath}}
+      <div class="info-chips" style="margin-top:16px;">
+        <div class="info-chip"><span class="info-chip-value">{{icon "check" 13}}{{t .Lang "panelsettings.proxy_active_label"}}</span></div>
+        {{if .Settings.SSLEnabled}}
+        <div class="info-chip"><span class="info-chip-value">{{icon "lock" 13}}{{t .Lang "panelsettings.ssl_active_label"}}</span></div>
+        {{if .CertStatus.Exists}}
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "panelsettings.cert_expires_label"}}</span><span class="info-chip-value">{{.CertStatus.DaysLeft}} {{t .Lang "panelsettings.cert_days_suffix"}}</span></div>
+        {{end}}
+        <a href="https://{{.Settings.Domain}}" target="_blank" rel="noopener" class="access-badge" style="text-decoration:none;">{{icon "link" 13}}{{t .Lang "panelsettings.visit_domain_link"}}</a>
+        {{else}}
+        <a href="http://{{.Settings.Domain}}" target="_blank" rel="noopener" class="access-badge" style="text-decoration:none;">{{icon "link" 13}}{{t .Lang "panelsettings.visit_domain_link"}}</a>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+
+    <!-- ===== Port ===== -->
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "panelsettings.port_section_title"}}</span></div>
+      <div class="info-chips" style="margin-bottom:14px;">
+        <div class="info-chip"><span class="info-chip-label">{{t .Lang "panelsettings.current_port_label"}}</span><span class="info-chip-value" style="font-family:var(--font-mono);">{{.CurrentPort}}</span></div>
+      </div>
+      <form method="post" action="/system/panel-settings/port" style="display:flex;gap:8px;align-items:flex-end;">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div style="flex:1;max-width:200px;">
+          <label class="field-label">{{t .Lang "panelsettings.form_new_port"}}</label>
+          <input class="input input-plain" type="number" name="port" min="1" max="65535" value="{{.CurrentPort}}">
+        </div>
+        <button type="submit" class="btn btn-danger">{{t .Lang "panelsettings.change_port_button"}}</button>
+      </form>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">{{t .Lang "panelsettings.change_port_note"}}</p>
+    </div>
+
+    <!-- ===== IP allow-list ===== -->
+    <div class="panel" style="padding:22px;margin-bottom:16px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "panelsettings.ip_section_title"}}</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">{{t .Lang "panelsettings.ip_section_hint"}}</p>
+      <form method="post" action="/system/panel-settings/allowed-ips">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <label class="field-label">{{t .Lang "panelsettings.form_allowed_ips"}}</label>
+        <input class="input input-plain" type="text" name="allowed_ips" value="{{.Settings.AllowedIPs}}" placeholder="203.0.113.5, 198.51.100.0/24" style="width:100%;">
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{t .Lang "panelsettings.save_button"}}</button>
+      </form>
+    </div>
+
+    <!-- ===== Brute-force protection (always on, informational) ===== -->
+    <div class="panel" style="padding:22px;">
+      <div class="panel-head"><span class="panel-title">{{t .Lang "panelsettings.lockout_section_title"}}</span></div>
+      <p style="font-size:12.5px;color:var(--text);">{{icon "shield" 14}} {{t .Lang "panelsettings.lockout_section_text"}}</p>
+    </div>
+
+  </div>
+</div>
+<script src="/static/js/install-forms.js"></script>
+</body>
+</html>
+{{end}}
