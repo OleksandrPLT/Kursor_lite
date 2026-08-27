@@ -179,6 +179,9 @@ type User struct {
 
 	Extension      string // internal phone extension, e.g. "104"
 	ContractNumber string // "" if unset
+
+	MailboxAddress string // real WildDuck mailbox address, "" if none provisioned — see internal/wildduck
+	MailboxID      string // WildDuck's own user id, "" if none
 }
 
 // PermissionsList splits the stored comma-separated permissions into a
@@ -336,11 +339,21 @@ func (s *Store) ResetPassword(id int64, passwordHash string) error {
 	return err
 }
 
+// SetUserMailbox ties a Kursor account to a real WildDuck mailbox —
+// see internal/wildduck. Clearing both to "" is how an admin later
+// disconnects an account from its mailbox without deleting either
+// side.
+func (s *Store) SetUserMailbox(id int64, address, mailboxID string) error {
+	_, err := s.db.Exec(`UPDATE users SET mailbox_address = ?, mailbox_id = ? WHERE id = ?`, address, mailboxID, id)
+	return err
+}
+
 const userSelect = `u.id, u.username, u.password_hash, u.full_name, u.email, u.role, u.status, u.created_at,
 	u.last_name, u.first_name, u.patronymic, u.job_title, u.phone, u.hired_at, u.terminated_at, u.avatar_mime,
 	(u.avatar IS NOT NULL AND length(u.avatar) > 0), u.permissions, u.department_id, u.position_id,
 	CASE WHEN d.id IS NULL THEN '' WHEN pd.id IS NULL THEN d.name ELSE pd.name || ' / ' || d.name END,
-	COALESCE(p.name, ''), u.support_group_id, COALESCE(sg.name, ''), u.extension, u.contract_number`
+	COALESCE(p.name, ''), u.support_group_id, COALESCE(sg.name, ''), u.extension, u.contract_number,
+	u.mailbox_address, u.mailbox_id`
 
 const userFrom = `FROM users u
 	LEFT JOIN departments d ON d.id = u.department_id
@@ -358,6 +371,7 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 		&u.LastName, &u.FirstName, &u.Patronymic, &u.JobTitle, &u.Phone, &u.HiredAt, &u.TerminatedAt, &u.AvatarMime,
 		&hasAvatar, &u.Permissions, &departmentID, &positionID, &u.DepartmentName, &u.PositionName,
 		&supportGroupID, &u.SupportGroupName, &u.Extension, &u.ContractNumber,
+		&u.MailboxAddress, &u.MailboxID,
 	); err != nil {
 		return nil, err
 	}

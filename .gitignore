@@ -9,3 +9,4 @@ data/
 /configs/kursor.env
 /dist/
 
+.claude/

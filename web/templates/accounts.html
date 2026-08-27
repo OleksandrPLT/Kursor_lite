@@ -33,6 +33,18 @@
     </div>
     {{end}}
 
+    {{if .NewMailboxAddress}}
+    <div class="created-banner">
+      <div class="created-banner-title">{{t .Lang "accounts.mailbox_created_title"}}</div>
+      <div class="created-banner-row">
+        <span class="kbd">{{.NewMailboxAddress}}</span>
+        <span class="kbd">{{.NewMailboxPassword}}</span>
+      </div>
+      <div class="created-banner-hint">{{t .Lang "accounts.created_hint"}}</div>
+    </div>
+    {{end}}
+
+    {{if .MailboxWarning}}<div class="error-banner">{{t .Lang .MailboxWarning}}</div>{{end}}
     {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
 
     <details class="add-account">
@@ -94,6 +106,16 @@
             <input class="input input-plain" type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif">
           </div>
         </div>
+
+        {{if .MailAvailable}}
+        <div style="margin-top:18px;">
+          <label class="permission-check"><input type="checkbox" name="create_mailbox" id="acc-create-mailbox" onclick="document.getElementById('acc-mailbox-prefix-row').style.display = this.checked ? 'flex' : 'none';">{{t .Lang "accounts.form_create_mailbox"}}</label>
+          <div id="acc-mailbox-prefix-row" style="display:none;align-items:center;gap:8px;margin-top:8px;max-width:360px;">
+            <input class="input input-plain" type="text" name="mailbox_prefix" placeholder="{{t .Lang "accounts.form_mailbox_prefix"}}" style="flex:1;">
+            <span class="cell-muted" style="font-family:var(--font-mono);">@{{.MailDomain}}</span>
+          </div>
+        </div>
+        {{end}}
 
         <label class="field-label" style="display:block;margin-top:18px;">{{t .Lang "accounts.form_permissions"}}</label>
         <div class="permission-grid">

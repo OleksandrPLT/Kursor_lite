@@ -3,6 +3,7 @@ package server
 import (
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -12,11 +13,18 @@ import (
 	"kursor/internal/auth"
 	"kursor/internal/i18n"
 	"kursor/internal/store"
+	"kursor/internal/wildduck"
 )
 
 // maxAvatarBytes caps profile photo uploads well under sqlite BLOB
 // comfort range — plenty for a small square headshot.
 const maxAvatarBytes = 1_500_000
+
+// mailboxPrefixRe mirrors what WildDuck itself accepts for a mailbox
+// username (letters/digits/dots/hyphens/underscores) — checked here
+// too so a rejected value comes back as a clear Kursor-side message
+// instead of a raw WildDuck API error.
+var mailboxPrefixRe = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,64}$`)
 
 var allowedAvatarMimes = map[string]bool{
 	"image/png":  true,
@@ -50,6 +58,24 @@ type AccountsData struct {
 	NewUsername  string
 	NewPassword  string
 	FormErrorKey string
+
+	// MailAvailable gates the "also create a mailbox" checkbox on the
+	// create form — hidden entirely when WildDuck isn't configured
+	// (internal/wildduck.LoadAPIToken), rather than showing a control
+	// that would just fail.
+	MailAvailable bool
+	MailDomain    string
+
+	// NewMailboxAddress/Password — shown once, right alongside the
+	// account's own new credentials, when mailbox creation was
+	// requested and succeeded.
+	NewMailboxAddress  string
+	NewMailboxPassword string
+	// MailboxWarning is set instead when the account itself was
+	// created fine but provisioning its mailbox failed — the account
+	// creation is never rolled back for this, since a working Kursor
+	// login is more important than a mailbox that can be added later.
+	MailboxWarning string
 }
 
 // ProfileData backs the read-only profile detail page for one account.
@@ -75,6 +101,24 @@ type AccountEditData struct {
 	FormErrorKey  string
 }
 
+// defaultMailDomain is the one real domain this box's WildDuck mail
+// server is currently configured for (see internal/wildduck) — a
+// constant for now since there's only ever the one; if a second
+// domain is ever added to WildDuck, this becomes a dropdown backed by
+// a real list instead of a single hardcoded value.
+const defaultMailDomain = "intech.org.ua"
+
+// mailIntegrationStatus reports whether account creation can offer
+// "also create a mailbox" — gated on WildDuck actually being
+// configured (internal/wildduck.LoadAPIToken), so the checkbox never
+// shows up on a box that has no mail server integration wired up.
+func (s *Server) mailIntegrationStatus() (available bool, domain string) {
+	if _, err := wildduck.LoadAPIToken(s.cfg.DataDir); err != nil {
+		return false, ""
+	}
+	return true, defaultMailDomain
+}
+
 func (s *Server) handleAccountsPage(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromContext(r)
 	accounts, err := s.store.ListUsers()
@@ -84,11 +128,14 @@ func (s *Server) handleAccountsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	departments, _ := s.store.ListDepartments()
 	positions, _ := s.store.ListPositions()
+	mailAvailable, mailDomain := s.mailIntegrationStatus()
 	s.render(w, "accounts", AccountsData{
-		PageData:    s.basePageData(w, r, "accounts", sess),
-		Accounts:    accounts,
-		Departments: departments,
-		Positions:   positions,
+		PageData:      s.basePageData(w, r, "accounts", sess),
+		Accounts:      accounts,
+		Departments:   departments,
+		Positions:     positions,
+		MailAvailable: mailAvailable,
+		MailDomain:    mailDomain,
 	})
 }
 
@@ -273,12 +320,15 @@ func (s *Server) handleAccountsCreate(w http.ResponseWriter, r *http.Request) {
 		accounts, _ := s.store.ListUsers()
 		departments, _ := s.store.ListDepartments()
 		positions, _ := s.store.ListPositions()
+		mailAvailable, mailDomain := s.mailIntegrationStatus()
 		s.render(w, "accounts", AccountsData{
-			PageData:     s.basePageData(w, r, "accounts", sess),
-			Accounts:     accounts,
-			Departments:  departments,
-			Positions:    positions,
-			FormErrorKey: key,
+			PageData:      s.basePageData(w, r, "accounts", sess),
+			Accounts:      accounts,
+			Departments:   departments,
+			Positions:     positions,
+			MailAvailable: mailAvailable,
+			MailDomain:    mailDomain,
+			FormErrorKey:  key,
 		})
 	}
 
@@ -350,17 +400,61 @@ func (s *Server) handleAccountsCreate(w http.ResponseWriter, r *http.Request) {
 		s.saveAvatarIfValid(id, file, header.Size)
 	}
 
-	accounts, _ := s.store.ListUsers()
-	departments, _ := s.store.ListDepartments()
-	positions, _ := s.store.ListPositions()
-	s.render(w, "accounts", AccountsData{
-		PageData:    s.basePageData(w, r, "accounts", sess),
-		Accounts:    accounts,
-		Departments: departments,
-		Positions:   positions,
+	data := AccountsData{
 		NewUsername: username,
 		NewPassword: tempPassword,
-	})
+	}
+	if strings.TrimSpace(r.FormValue("create_mailbox")) != "" {
+		s.provisionMailbox(id, username, r.FormValue("mailbox_prefix"), r.FormValue("first_name"), r.FormValue("last_name"), &data)
+	}
+
+	data.PageData = s.basePageData(w, r, "accounts", sess)
+	data.Accounts, _ = s.store.ListUsers()
+	data.Departments, _ = s.store.ListDepartments()
+	data.Positions, _ = s.store.ListPositions()
+	data.MailAvailable, data.MailDomain = s.mailIntegrationStatus()
+	s.render(w, "accounts", data)
+}
+
+// provisionMailbox creates a real WildDuck mailbox for a
+// just-created account and ties it to that account
+// (store.SetUserMailbox) — best-effort: a failure here is recorded as
+// MailboxWarning on data, never as a hard error, since the Kursor
+// account itself is already created and working regardless of
+// whether its mailbox came along with it. prefix falls back to the
+// account's own username when left blank.
+func (s *Server) provisionMailbox(userID int64, username, prefix, firstName, lastName string, data *AccountsData) {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
+		prefix = username
+	}
+	if !mailboxPrefixRe.MatchString(prefix) {
+		data.MailboxWarning = "mail.error.invalid_prefix"
+		return
+	}
+
+	token, err := wildduck.LoadAPIToken(s.cfg.DataDir)
+	if err != nil {
+		data.MailboxWarning = "mail.error.not_configured"
+		return
+	}
+	mailboxPassword, err := auth.GenerateTempPassword()
+	if err != nil {
+		data.MailboxWarning = "accounts.error.generic"
+		return
+	}
+	address := prefix + "@" + defaultMailDomain
+	fullName := strings.TrimSpace(firstName + " " + lastName)
+
+	client := wildduck.NewClient("http://127.0.0.1:8080", token)
+	mailboxID, err := client.CreateUser(prefix, mailboxPassword, address, fullName)
+	if err != nil {
+		data.MailboxWarning = "mail.error.create_failed"
+		return
+	}
+	_ = s.store.SetUserMailbox(userID, address, mailboxID)
+	data.NewMailboxAddress = address
+	data.NewMailboxPassword = mailboxPassword
 }
 
 // parsePermissions joins submitted permission checkboxes, keeping only
