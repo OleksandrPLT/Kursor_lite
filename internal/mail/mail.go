@@ -153,11 +153,25 @@ userdb {
 // virtual mail delivery runs as, if it doesn't already exist — the
 // standard real-world setup (a shared uid/gid across every virtual
 // mailbox, since none of them are real Unix accounts).
+//
+// The group is created explicitly, with vmailGID pinned via -g, before
+// the user — useradd's own "create a same-named group automatically"
+// default isn't guaranteed to land on vmailGID, and the Dovecot userdb
+// config above (userdb { args = uid=... gid=vmailGID ... }) hardcodes
+// that numeric GID regardless of whatever the OS actually assigned.
+// Confirmed live: a box where that drifted left Dovecot's mail process
+// running as "egid=5000(<unknown>)" — a GID with no /etc/group entry
+// at all — unable to even enter its own mailbox directory.
 func ensureVMailUser() error {
+	if _, err := user.LookupGroup(vmailUser); err != nil {
+		if out, err := exec.Command("groupadd", "-r", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
+			return fmt.Errorf("groupadd %s: %s", vmailUser, out)
+		}
+	}
 	if _, err := user.Lookup(vmailUser); err == nil {
 		return nil
 	}
-	out, err := exec.Command("useradd", "-r", "-u", vmailUID, "-d", mailboxBase, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput()
+	out, err := exec.Command("useradd", "-r", "-u", vmailUID, "-g", vmailGID, "-d", mailboxBase, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("useradd %s: %s", vmailUser, out)
 	}
@@ -212,6 +226,14 @@ func ApplyPostfix(domains []string, mailboxes []Mailbox) error {
 	if err := os.MkdirAll(mailboxBase, 0o750); err != nil {
 		return err
 	}
+	// /var/mail is a standard setgid-"mail" directory on most distros,
+	// so anything MkdirAll creates under it inherits group "mail" (GID
+	// 8) — not vmail's own group — regardless of the 0750 passed above.
+	// Confirmed live: exactly this left vmail (uid/gid 5000) unable to
+	// even chdir into its own mailbox tree. Numeric ids here, not the
+	// "vmail" name, since this runs right after ensureVMailUser may have
+	// just created it and nsswitch caching shouldn't be relied on.
+	_, _ = exec.Command("chown", "-R", vmailUID+":"+vmailGID, mailboxBase).CombinedOutput()
 
 	if out, err := exec.Command("postconf", "-e",
 		"virtual_mailbox_domains="+strings.Join(domains, ", "),
