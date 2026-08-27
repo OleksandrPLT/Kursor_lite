@@ -653,6 +653,25 @@ var dict = map[string]map[string]string{
 	"profile.my_approvals": {"uk": "Мої погодження", "en": "My Approvals"},
 	"profile.view_profile": {"uk": "Профіль", "en": "Profile"},
 
+	// --- Self-service profile: change your own password directly,
+	// request everything else as a real ticket ---
+	"profile.change_password_title":        {"uk": "Змінити пароль", "en": "Change password"},
+	"profile.form_current_password":        {"uk": "Поточний пароль", "en": "Current password"},
+	"profile.form_new_password":            {"uk": "Новий пароль", "en": "New password"},
+	"profile.form_new_password_confirm":    {"uk": "Повторіть новий пароль", "en": "Confirm new password"},
+	"profile.change_password_button":       {"uk": "Змінити пароль", "en": "Change password"},
+	"profile.password_changed_notice":      {"uk": "Пароль змінено.", "en": "Password changed."},
+	"profile.error.wrong_current_password": {"uk": "Поточний пароль вказано невірно.", "en": "Current password is incorrect."},
+	"profile.error.password_too_short":     {"uk": "Новий пароль має бути не менше 8 символів.", "en": "New password must be at least 8 characters."},
+	"profile.error.password_mismatch":      {"uk": "Паролі не збігаються.", "en": "Passwords don't match."},
+
+	"profile.request_edit_button":    {"uk": "Подати запит на редагування", "en": "Submit an edit request"},
+	"profile.request_edit_title":     {"uk": "Що потрібно змінити у вашому профілі?", "en": "What would you like changed in your profile?"},
+	"profile.form_details":           {"uk": "Опишіть, що змінити (ім'я, телефон, підрозділ тощо)", "en": "Describe what to change (name, phone, department, etc.)"},
+	"profile.request_edit_submit":    {"uk": "Надіслати запит", "en": "Send request"},
+	"profile.error.details_required": {"uk": "Опишіть, що саме потрібно змінити.", "en": "Describe what needs to change."},
+	"profile.edit_request_title":     {"uk": "Запит на редагування профілю", "en": "Profile edit request"},
+
 	// --- Ticket attachments (real, not a placeholder) ---
 	"servicedesk.form_attachment": {"uk": "Файл (необов'язково, до 10 МБ)", "en": "File (optional, up to 10 MB)"},
 

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"kursor/internal/auth"
+	"kursor/internal/i18n"
 	"kursor/internal/store"
 )
 
@@ -54,10 +55,12 @@ type AccountsData struct {
 // ProfileData backs the read-only profile detail page for one account.
 type ProfileData struct {
 	PageData
-	Account      store.User
-	IsOwnProfile bool
-	MyTickets    []store.Ticket // only populated for IsOwnProfile — "Мої запити"
-	MyApprovals  []store.Ticket // only populated for IsOwnProfile admins — "Мої погодження"
+	Account         store.User
+	IsOwnProfile    bool
+	MyTickets       []store.Ticket // only populated for IsOwnProfile — "Мої запити"
+	MyApprovals     []store.Ticket // only populated for IsOwnProfile admins — "Мої погодження"
+	PasswordChanged bool
+	FormErrorKey    string
 }
 
 // AccountEditData backs the edit-account page.
@@ -89,22 +92,11 @@ func (s *Server) handleAccountsPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleAccountProfile(w http.ResponseWriter, r *http.Request) {
-	sess := sessionFromContext(r)
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
-		return
-	}
-	account, err := s.store.GetUserByID(id)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	if account == nil {
-		http.NotFound(w, r)
-		return
-	}
+// loadProfileData builds the profile page's data for account id — used
+// by the plain GET as well as every self-service POST action below, so
+// a validation error or the post-password-change confirmation re-renders
+// the exact same page rather than a stripped-down copy of it.
+func (s *Server) loadProfileData(w http.ResponseWriter, r *http.Request, sess *store.Session, account *store.User) ProfileData {
 	data := ProfileData{
 		PageData:     s.basePageData(w, r, "accounts", sess),
 		Account:      *account,
@@ -122,7 +114,137 @@ func (s *Server) handleAccountProfile(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	return data
+}
+
+func (s *Server) handleAccountProfile(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	account, err := s.store.GetUserByID(id)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if account == nil {
+		http.NotFound(w, r)
+		return
+	}
+	s.render(w, "profile", s.loadProfileData(w, r, sess, account))
+}
+
+// handleAccountSelfPassword lets an account change its OWN password —
+// the one profile field self-service editing touches directly. Every
+// other field goes through handleAccountRequestEdit's ticket instead,
+// since those (department transfers, name corrections, ...) need
+// someone else to actually act on them, not just a click. Requires the
+// CURRENT password, unlike an admin's reset button — so an unattended,
+// already-logged-in session sitting open can't be used by whoever
+// finds it to lock the real owner out.
+func (s *Server) handleAccountSelfPassword(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if sess == nil || sess.UserID != id {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	account, err := s.store.GetUserByID(id)
+	if err != nil || account == nil {
+		http.NotFound(w, r)
+		return
+	}
+	renderErr := func(key string) {
+		data := s.loadProfileData(w, r, sess, account)
+		data.FormErrorKey = key
+		s.render(w, "profile", data)
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		renderErr("login.error.csrf")
+		return
+	}
+	if !auth.CheckPassword(account.PasswordHash, r.FormValue("current_password")) {
+		renderErr("profile.error.wrong_current_password")
+		return
+	}
+	newPassword := r.FormValue("new_password")
+	if len(newPassword) < 8 {
+		renderErr("profile.error.password_too_short")
+		return
+	}
+	if newPassword != r.FormValue("new_password_confirm") {
+		renderErr("profile.error.password_mismatch")
+		return
+	}
+	hash, err := auth.HashPassword(newPassword)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if err := s.store.ResetPassword(id, hash); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	data := s.loadProfileData(w, r, sess, account)
+	data.PasswordChanged = true
 	s.render(w, "profile", data)
+}
+
+// handleAccountRequestEdit is every OTHER profile change: instead of a
+// direct edit, it files a real Service Desk ticket (topic "accounts")
+// describing what the person wants changed, so an admin/HR actually
+// acts on it — the same "topic -> queue" path every other request
+// already goes through, just launched from the profile page instead of
+// the Service Desk's own "new ticket" form.
+func (s *Server) handleAccountRequestEdit(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromContext(r)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if sess == nil || sess.UserID != id {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	account, err := s.store.GetUserByID(id)
+	if err != nil || account == nil {
+		http.NotFound(w, r)
+		return
+	}
+	renderErr := func(key string) {
+		data := s.loadProfileData(w, r, sess, account)
+		data.FormErrorKey = key
+		s.render(w, "profile", data)
+	}
+	if err := r.ParseForm(); err != nil || !auth.ValidCSRF(r) {
+		renderErr("login.error.csrf")
+		return
+	}
+	details := strings.TrimSpace(r.FormValue("details"))
+	if details == "" {
+		renderErr("profile.error.details_required")
+		return
+	}
+	ticketID, err := s.store.CreateTicket(store.NewTicket{
+		Title:       i18n.T(getLang(r), "profile.edit_request_title"),
+		Description: details,
+		Type:        "request",
+		Topic:       "accounts",
+		Priority:    "medium",
+		RequesterID: sess.UserID,
+	})
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/company/servicedesk/"+strconv.FormatInt(ticketID, 10), http.StatusSeeOther)
 }
 
 // handleAccountAvatar serves a stored profile photo. Any authenticated

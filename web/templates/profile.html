@@ -27,8 +27,11 @@
           <span class="status-badge status-{{.Account.Status}}">{{if eq .Account.Status "active"}}{{t .Lang "accounts.status.active"}}{{else}}{{t .Lang "accounts.status.disabled"}}{{end}}</span>
         </div>
       </div>
-      <a href="/accounts/{{.Account.ID}}/edit" class="btn btn-primary">{{icon "gear" 15}}{{t .Lang "accounts.action.edit"}}</a>
+      {{if .IsAdmin}}<a href="/accounts/{{.Account.ID}}/edit" class="btn btn-primary">{{icon "gear" 15}}{{t .Lang "accounts.action.edit"}}</a>{{end}}
     </div>
+
+    {{if .FormErrorKey}}<div class="error-banner">{{t .Lang .FormErrorKey}}</div>{{end}}
+    {{if .PasswordChanged}}<div class="created-banner"><div class="created-banner-title">{{t .Lang "profile.password_changed_notice"}}</div></div>{{end}}
 
     <div class="content-grid">
       <div class="panel">
@@ -106,6 +109,38 @@
         {{end}}
       </div>
       {{end}}
+    </div>
+
+    <div class="content-grid" style="margin-top:16px;">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "profile.change_password_title"}}</span></div>
+        <form method="post" action="/accounts/{{.Account.ID}}/self-password">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <div style="margin-bottom:10px;">
+            <label class="field-label">{{t .Lang "profile.form_current_password"}}</label>
+            <input class="input input-plain" type="password" name="current_password" required style="width:100%;">
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="field-label">{{t .Lang "profile.form_new_password"}}</label>
+            <input class="input input-plain" type="password" name="new_password" minlength="8" required style="width:100%;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label class="field-label">{{t .Lang "profile.form_new_password_confirm"}}</label>
+            <input class="input input-plain" type="password" name="new_password_confirm" minlength="8" required style="width:100%;">
+          </div>
+          <button type="submit" class="btn btn-primary">{{icon "lock" 14}}{{t .Lang "profile.change_password_button"}}</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">{{t .Lang "profile.request_edit_button"}}</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">{{t .Lang "profile.request_edit_title"}}</p>
+        <form method="post" action="/accounts/{{.Account.ID}}/request-edit">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <textarea name="details" class="input input-plain" style="width:100%;min-height:90px;" placeholder="{{t .Lang "profile.form_details"}}" required></textarea>
+          <button type="submit" class="btn btn-primary" style="margin-top:10px;">{{icon "lifebuoy" 14}}{{t .Lang "profile.request_edit_submit"}}</button>
+        </form>
+      </div>
     </div>
     {{end}}
 

@@ -259,9 +259,15 @@ func New(cfg config.Config, st *store.Store, mon *monitor.Collector, issuer *oid
 
 		// Viewing a profile (read-only) is open to every logged-in
 		// user, not just admins — "who is this person" is reasonable to
-		// know regardless of module access; editing (below, inside the
-		// requireAdmin group) stays admin-only.
+		// know regardless of module access; the full edit page (below,
+		// inside the requireAdmin group) stays admin-only. These two
+		// actions are the one exception: an account can act on its OWN
+		// profile without being an admin — see accounts.go's own
+		// sess.UserID == id check in each handler, since this route
+		// group has no such restriction of its own.
 		r.Get("/accounts/{id}", s.handleAccountProfile)
+		r.Post("/accounts/{id}/self-password", s.handleAccountSelfPassword)
+		r.Post("/accounts/{id}/request-edit", s.handleAccountRequestEdit)
 
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAdmin)
