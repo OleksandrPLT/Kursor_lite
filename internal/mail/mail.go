@@ -264,9 +264,19 @@ func ApplyDovecot(mailboxes []Mailbox, masterPasswordHash string) error {
 	if err := os.WriteFile(dovecotUsersPath, []byte(renderDovecotUsers(mailboxes)), 0o640); err != nil {
 		return err
 	}
-	if err := os.WriteFile(dovecotMasterPath, []byte(masterUsername+":"+masterPasswordHash+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(dovecotMasterPath, []byte(masterUsername+":"+masterPasswordHash+"\n"), 0o640); err != nil {
 		return err
 	}
+	// Dovecot's auth worker runs as its own unprivileged "dovecot" user,
+	// not root — os.WriteFile leaves both files owned by root:root, so
+	// even at mode 0640 the dovecot group can't actually read them
+	// (confirmed live: "auth: Error: passwd-file ... Permission denied
+	// ... we're not in group 0(root)"). Same fix internal/powerdns's own
+	// conf.d drop-in needed for the identical reason — chown to the
+	// service's own group right after writing.
+	_, _ = exec.Command("chown", "root:dovecot", dovecotUsersPath).CombinedOutput()
+	_, _ = exec.Command("chown", "root:dovecot", dovecotMasterPath).CombinedOutput()
+
 	if out, err := exec.Command("doveconf", "-n").CombinedOutput(); err != nil {
 		return fmt.Errorf("doveconf -n failed: %s", out)
 	}
