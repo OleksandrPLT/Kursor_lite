@@ -36,6 +36,15 @@ const (
 	vmailUser         = "vmail"
 	vmailUID          = "5000"
 	vmailGID          = "5000"
+	// vmailGroupName is deliberately NOT "vmail" — some distros' own
+	// mail-related packages already claim a system group literally
+	// named "vmail" for their own purposes, with whatever GID happened
+	// to be free at package-install time (confirmed live: GID 988 on a
+	// real box). Dovecot's userdb config below hardcodes the bare
+	// number vmailGID, not a name, so what matters is that SOME group
+	// has that exact GID — colliding on the name while needing an exact
+	// GID would either fail outright or silently reuse the wrong group.
+	vmailGroupName = "kursor-vmail"
 	masterUsername    = "kursor-master"
 	masterUserSep     = "*"
 	imapAddr          = "127.0.0.1:143"
@@ -154,28 +163,48 @@ userdb {
 // standard real-world setup (a shared uid/gid across every virtual
 // mailbox, since none of them are real Unix accounts).
 //
-// The group is created explicitly, with vmailGID pinned via -g, before
-// the user — useradd's own "create a same-named group automatically"
-// default isn't guaranteed to land on vmailGID, and the Dovecot userdb
-// config above (userdb { args = uid=... gid=vmailGID ... }) hardcodes
-// that numeric GID regardless of whatever the OS actually assigned.
-// Confirmed live: a box where that drifted left Dovecot's mail process
-// running as "egid=5000(<unknown>)" — a GID with no /etc/group entry
-// at all — unable to even enter its own mailbox directory.
+// The group is created explicitly, checked by numeric GID rather than
+// name (see vmailGroupName's comment), before the user — useradd's own
+// "create a same-named group automatically" default isn't guaranteed
+// to land on vmailGID, and the Dovecot userdb config above (userdb {
+// args = uid=... gid=vmailGID ... }) hardcodes that numeric GID
+// regardless of whatever the OS actually assigned. If vmailUser
+// already exists from before this fix, its primary group is
+// corrected too — this runs on every ApplyPostfix, so a box that hit
+// the bug self-heals the next time any mail setting changes.
 func ensureVMailUser() error {
-	if _, err := user.LookupGroup(vmailUser); err != nil {
-		if out, err := exec.Command("groupadd", "-r", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
-			return fmt.Errorf("groupadd %s: %s", vmailUser, out)
+	if !groupIDExists(vmailGID) {
+		if out, err := exec.Command("groupadd", "-r", "-g", vmailGID, vmailGroupName).CombinedOutput(); err != nil {
+			return fmt.Errorf("groupadd %s: %s", vmailGroupName, out)
 		}
 	}
-	if _, err := user.Lookup(vmailUser); err == nil {
+	if _, err := user.Lookup(vmailUser); err != nil {
+		out, err := exec.Command("useradd", "-r", "-u", vmailUID, "-g", vmailGID, "-d", mailboxBase, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("useradd %s: %s", vmailUser, out)
+		}
 		return nil
 	}
-	out, err := exec.Command("useradd", "-r", "-u", vmailUID, "-g", vmailGID, "-d", mailboxBase, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("useradd %s: %s", vmailUser, out)
-	}
+	_, _ = exec.Command("usermod", "-g", vmailGID, vmailUser).CombinedOutput()
 	return nil
+}
+
+// groupIDExists checks /etc/group by numeric GID, not name — a group
+// literally named "vmail" may already exist under a different GID
+// (see vmailGroupName), so a name-based check would wrongly conclude
+// there's nothing to do.
+func groupIDExists(gid string) bool {
+	out, err := exec.Command("getent", "group").Output()
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) >= 3 && fields[2] == gid {
+			return true
+		}
+	}
+	return false
 }
 
 func postfixReload() error {
